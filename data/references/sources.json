@@ -1,0 +1,132 @@
+{
+  "_note": "The curated reference library. A PDF in this folder is IGNORED by the ingester unless it is declared here. Page numbers are 1-based PDF pages (what your PDF reader shows), not the printed page numbers, which often differ. Only pages inside a declared section are ingested. Sources with a \"url\" are copyrighted and gitignored rather than committed — download them from that address into this folder.",
+  "sources": [
+    {
+      "file": "WHO_HTM_TB_2008.410_eng.pdf",
+      "title": "Practical Approach to Lung Health: Manual on initiating PAL implementation",
+      "publisher": "World Health Organization",
+      "year": 2008,
+      "reference": "WHO/HTM/TB/2008.410",
+      "url": "https://www.who.int/publications/i/item/WHO-HTM-TB-2008.410",
+      "sections": [
+        {
+          "name": "Chapter 4 - Developing standard PAL clinical guidelines",
+          "first_page": 52,
+          "last_page": 69
+        },
+        {
+          "name": "Chapter 5 - Communication and patient counselling",
+          "first_page": 70,
+          "last_page": 75
+        }
+      ],
+      "notes": "An implementation manual for health ministries, not a clinical guideline. Of its 138 pages only Chapters 4 and 5 carry clinical content: the assessment and classification algorithm, severity grading, urgent-referral criteria, and patient counselling for asthma and COPD. Chapters 1-3 and 6-10 cover advocacy, disease burden, health-infrastructure assessment, information systems, training materials, feasibility studies, national expansion and programme monitoring, and are excluded. Much of Chapter 4 describes what a national guideline SHOULD specify rather than stating clinical facts, and defers detail to GINA, GOLD, IPCRG and IDSA."
+    },
+    {
+      "file": "GINA-Summary-Guide-2026-WEB-WMS.pdf",
+      "title": "Summary Guide for Asthma Management and Prevention, for adults, adolescents and children 6-11 years",
+      "publisher": "Global Initiative for Asthma",
+      "year": 2026,
+      "url": "https://ginasthma.org/2026-gina-summary-guide/",
+      "sections": [
+        {
+          "name": "Diagnosing and assessing asthma",
+          "first_page": 5,
+          "last_page": 14
+        },
+        {
+          "name": "Managing asthma - treatment selection and review",
+          "first_page": 15,
+          "last_page": 31
+        },
+        {
+          "name": "Comorbidities, viral infection and exacerbations",
+          "first_page": 32,
+          "last_page": 37
+        },
+        {
+          "name": "Medication reference tables",
+          "first_page": 38,
+          "last_page": 45
+        }
+      ],
+      "notes": "Almost entirely clinical: 41 of 47 pages ingested. Excluded are the cover, suggested citation, table of contents, abbreviations glossary, acknowledgements and back cover. Text extracts cleanly at roughly 2700 characters per page. Copyrighted and watermarked for personal use - gitignored, not committed."
+    },
+    {
+      "file": "GOLD-REPORT-2026-v1.3-8Dec2025_WMV2.pdf",
+      "title": "Global Strategy for the Diagnosis, Management, and Prevention of Chronic Obstructive Pulmonary Disease, 2026 Report",
+      "publisher": "Global Initiative for Chronic Obstructive Lung Disease",
+      "year": 2026,
+      "url": "https://goldcopd.org/2026-gold-report-and-pocket-guide/",
+      "sections": [
+        {
+          "name": "Chapter 1 - Definition and overview",
+          "first_page": 15,
+          "last_page": 30
+        },
+        {
+          "name": "Chapter 2 - Diagnosis, assessment and monitoring",
+          "first_page": 32,
+          "last_page": 60
+        },
+        {
+          "name": "Chapter 3 - Prevention and management of COPD",
+          "first_page": 61,
+          "last_page": 102
+        },
+        {
+          "name": "Chapter 4 - Management of exacerbations",
+          "first_page": 103,
+          "last_page": 122
+        },
+        {
+          "name": "Chapter 5 - COPD and multimorbidity",
+          "first_page": 123,
+          "last_page": 141
+        },
+        {
+          "name": "Appendix 2 - COPD follow-up checklist",
+          "first_page": 151,
+          "last_page": 152
+        }
+      ],
+      "notes": "Replaces the 2026 pocket guide, which was unusable: about 50 of that document's 69 pages were images carrying no extractable text. This full report averages 3876 characters per page and extracts cleanly. 128 of its 248 pages are ingested - Chapters 1 to 5 and the follow-up checklist. Excluded: front matter and table of contents (1-14), Chapter 6 on artificial intelligence (142-148), the abbreviations appendix (149-150), the evidence-overview appendices (153-174), which summarise literature rather than give guidance, and the references (175-248). This is the largest source in the corpus by some margin; if COPD material starts crowding out other conditions in retrieval, narrow Chapter 3 first."
+    },
+    {
+      "file": "pneumonia-diagnosis-and-management-pdf-66144010347205.pdf",
+      "title": "Pneumonia: diagnosis and management",
+      "publisher": "National Institute for Health and Care Excellence",
+      "year": 2025,
+      "reference": "NICE guideline NG250, published 2 September 2025",
+      "url": "https://www.nice.org.uk/guidance/ng250",
+      "sections": [
+        {
+          "name": "Recommendations - diagnosis, severity assessment, antibiotics, reassessment and follow-up",
+          "first_page": 7,
+          "last_page": 41
+        }
+      ],
+      "notes": "35 of 60 pages ingested: the recommendations themselves, including the CRB65 and CURB65 severity boxes and the antibiotic tables for community-acquired and hospital-acquired pneumonia. Excluded: cover and contents (1-6), research recommendations (42-43), the 'Rationale and impact' sections (44-57), which explain what the committee discussed rather than what to do, and the context, committee and update-information pages (58-60). NG250 replaces NG138 and NG139. Note that it covers babies, children and young people as well as adults, so paediatric dosing tables are in the corpus even though this assistant is aimed at adults - the tables are labelled by age. Copyrighted by NICE - gitignored, not committed."
+    },
+    {
+      "file": "WHO_COVID.pdf",
+      "title": "Clinical management of COVID-19: living guideline, June 2025",
+      "publisher": "World Health Organization",
+      "year": 2025,
+      "url": "https://www.who.int/publications/i/item/B09467",
+      "sections": [
+        {
+          "name": "Severity classification, diagnosis, isolation and management of non-severe and severe COVID-19",
+          "first_page": 16,
+          "last_page": 35
+        },
+        {
+          "name": "Antibiotics in COVID-19, rehabilitation, pregnancy, older people and post COVID-19 condition",
+          "first_page": 64,
+          "last_page": 80
+        }
+      ],
+      "notes": "37 of 149 pages ingested. Excluded: front matter and guideline-development methodology (1-15), acknowledgements (94-102), annexes including search strategies and study tables (103-118), and references (119-149). Pages 36-63 are also excluded on purpose - they cover invasive ventilation, ARDS management and MIS-C, which belong to intensive care rather than the primary-care presentations this assistant handles, and are dense with GRADE evidence tables that read poorly as retrieved excerpts. Widen that range if the scope ever extends to inpatient care."
+    }
+  ]
+}

@@ -1,0 +1,311 @@
+{
+  "_note": "Fictional test patients. No real patient data. Edit freely and re-run `python -m storage.cli seed --reset` to load your own cases. Every key here must match the Pydantic models in patient/profile.py and patient/visit.py exactly — an unknown key is rejected rather than ignored, on purpose.",
+  "patients": [
+    {
+      "id": "P-001",
+      "full_name": "Kamel Bouzid",
+      "sex": "male",
+      "date_of_birth": "1958-04-12",
+      "allergies": [
+        {
+          "substance": "Penicillin",
+          "reaction": "urticaria and facial swelling",
+          "severity": "severe"
+        }
+      ],
+      "medications": [
+        {
+          "name": "Tiotropium",
+          "dose": "18 mcg",
+          "frequency": "inhaled once daily",
+          "indication": "COPD",
+          "started": "2016"
+        },
+        {
+          "name": "Salbutamol",
+          "dose": "100 mcg",
+          "frequency": "inhaled as needed",
+          "indication": "breathlessness",
+          "started": "2016"
+        },
+        {
+          "name": "Atorvastatin",
+          "dose": "20 mg",
+          "frequency": "once daily",
+          "indication": "hyperlipidaemia",
+          "started": "2019"
+        }
+      ],
+      "chronic_conditions": [
+        {
+          "name": "COPD",
+          "since": "2016",
+          "notes": "GOLD group B, two exacerbations in the past year"
+        },
+        {
+          "name": "Hyperlipidaemia",
+          "since": "2019"
+        }
+      ],
+      "smoking": {
+        "status": "former",
+        "pack_years": 45,
+        "quit_year": 2018
+      },
+      "notes": "Lives alone. Retired lorry driver."
+    },
+    {
+      "id": "P-002",
+      "full_name": "Lina Cherif",
+      "sex": "female",
+      "date_of_birth": "2002-01-30",
+      "allergies": [],
+      "medications": [
+        {
+          "name": "Budesonide/Formoterol",
+          "dose": "160/4.5 mcg",
+          "frequency": "inhaled twice daily",
+          "indication": "asthma",
+          "started": "2021"
+        }
+      ],
+      "chronic_conditions": [
+        {
+          "name": "Asthma",
+          "since": "childhood",
+          "notes": "Triggered by cold air and pollen"
+        }
+      ],
+      "smoking": {
+        "status": "never"
+      },
+      "notes": "University student. No previous visits at this clinic."
+    },
+    {
+      "id": "P-004",
+      "full_name": "Aya Diab",
+      "sex": "female",
+      "date_of_birth": "1975-03-22",
+      "allergies": [
+        {
+          "substance": "Aspirin",
+          "reaction": "wheeze",
+          "severity": "moderate"
+        }
+      ],
+      "medications": [
+        {
+          "name": "Metformin",
+          "dose": "850 mg",
+          "frequency": "twice daily",
+          "indication": "diabetes"
+        }
+      ],
+      "chronic_conditions": [
+        {
+          "name": "Type 2 diabetes",
+          "since": "2015"
+        }
+      ],
+      "smoking": {
+        "status": "current",
+        "pack_years": 25
+      },
+      "notes": "Works in a bakery — flour dust exposure."
+    },
+    {
+      "id": "P-003",
+      "full_name": "Rachid Meziane",
+      "sex": "male",
+      "date_of_birth": "1971-06-05",
+      "allergies": [
+        {
+          "substance": "Sulfonamides",
+          "reaction": "widespread rash",
+          "severity": "moderate"
+        }
+      ],
+      "medications": [
+        {
+          "name": "Warfarin",
+          "dose": "5 mg",
+          "frequency": "once daily",
+          "indication": "atrial fibrillation",
+          "started": "2022"
+        },
+        {
+          "name": "Metformin",
+          "dose": "1000 mg",
+          "frequency": "twice daily",
+          "indication": "type 2 diabetes",
+          "started": "2018"
+        },
+        {
+          "name": "Lisinopril",
+          "dose": "10 mg",
+          "frequency": "once daily",
+          "indication": "hypertension",
+          "started": "2020"
+        }
+      ],
+      "chronic_conditions": [
+        {
+          "name": "Type 2 diabetes mellitus",
+          "since": "2018"
+        },
+        {
+          "name": "Hypertension",
+          "since": "2020"
+        },
+        {
+          "name": "Atrial fibrillation",
+          "since": "2022",
+          "notes": "Anticoagulated with warfarin, target INR 2-3"
+        }
+      ],
+      "smoking": {
+        "status": "former",
+        "pack_years": 20,
+        "quit_year": 2015
+      },
+      "notes": "Warfarin makes antibiotic choice non-trivial; useful case for interaction checking."
+    }
+  ],
+  "visits": [
+    {
+      "id": "V-001",
+      "patient_id": "P-001",
+      "created_at": "2026-03-02T09:15:00+00:00",
+      "status": "COMPLETED",
+      "chief_complaint": "Three days of worsening breathlessness and increased sputum",
+      "symptoms": [
+        "increased sputum volume",
+        "purulent sputum",
+        "breathlessness on minimal exertion",
+        "wheeze"
+      ],
+      "vitals": {
+        "temperature_c": 37.6,
+        "heart_rate": 96,
+        "respiratory_rate": 24,
+        "blood_pressure": "138/84",
+        "spo2": 91
+      },
+      "physical_exam": "Prolonged expiratory phase, diffuse wheeze, no focal crackles",
+      "working_diagnosis": {
+        "label": "COPD exacerbation, likely bacterial",
+        "icd10_code": "J44.1"
+      },
+      "ordered_investigations": [
+        {
+          "name": "Chest X-ray",
+          "category": "radiology",
+          "rationale": "Exclude pneumonia or pneumothorax as the cause of decompensation",
+          "status": "resulted"
+        },
+        {
+          "name": "CBC",
+          "category": "laboratory",
+          "rationale": "Assess for leucocytosis",
+          "status": "resulted"
+        }
+      ],
+      "prescribed_medications": [
+        {
+          "name": "Prednisolone",
+          "dose": "40 mg",
+          "frequency": "once daily",
+          "duration": "5 days"
+        },
+        {
+          "name": "Doxycycline",
+          "dose": "100 mg",
+          "frequency": "twice daily",
+          "duration": "5 days",
+          "rationale": "Penicillin allergy — amoxicillin avoided"
+        }
+      ],
+      "doctor_notes": "Inhaler technique reviewed. Advised to return if breathlessness worsens."
+    },
+    {
+      "id": "V-002",
+      "patient_id": "P-001",
+      "created_at": "2026-07-28T11:40:00+00:00",
+      "status": "WAITING_FOR_TESTS",
+      "chief_complaint": "Five days of productive cough with fever",
+      "symptoms": [
+        "productive cough, rust-coloured sputum",
+        "fever with rigors",
+        "right-sided pleuritic chest pain",
+        "fatigue"
+      ],
+      "vitals": {
+        "temperature_c": 38.7,
+        "heart_rate": 108,
+        "respiratory_rate": 26,
+        "blood_pressure": "124/78",
+        "spo2": 89
+      },
+      "physical_exam": "Crackles at the right base with reduced air entry, dull to percussion",
+      "observations": "Patient appears unwell but is oriented and speaking in full sentences",
+      "working_diagnosis": {
+        "label": "Suspected community-acquired pneumonia on a background of COPD",
+        "icd10_code": "J18.9"
+      },
+      "ordered_investigations": [
+        {
+          "name": "Chest X-ray",
+          "category": "radiology",
+          "rationale": "Confirm consolidation and assess for effusion",
+          "status": "ordered"
+        },
+        {
+          "name": "CBC",
+          "category": "laboratory",
+          "rationale": "Leucocytosis supports bacterial infection",
+          "status": "ordered"
+        },
+        {
+          "name": "CRP",
+          "category": "laboratory",
+          "rationale": "Baseline marker for treatment response",
+          "status": "ordered"
+        }
+      ],
+      "doctor_notes": "Saturations borderline. Patient declined admission; to return with results within 48 hours."
+    },
+    {
+      "id": "V-003",
+      "patient_id": "P-003",
+      "created_at": "2025-12-14T15:05:00+00:00",
+      "status": "COMPLETED",
+      "chief_complaint": "Ten days of dry cough following a head cold",
+      "symptoms": [
+        "dry cough",
+        "no fever",
+        "mild chest soreness on coughing"
+      ],
+      "vitals": {
+        "temperature_c": 36.9,
+        "heart_rate": 78,
+        "respiratory_rate": 16,
+        "blood_pressure": "132/80",
+        "spo2": 97
+      },
+      "physical_exam": "Chest clear, no crackles or wheeze",
+      "working_diagnosis": {
+        "label": "Acute bronchitis, viral",
+        "icd10_code": "J20.9"
+      },
+      "prescribed_medications": [
+        {
+          "name": "Paracetamol",
+          "dose": "1 g",
+          "frequency": "up to four times daily as needed",
+          "rationale": "Symptomatic relief; avoids NSAID interaction with warfarin"
+        }
+      ],
+      "doctor_notes": "No investigations indicated. Reassured; cough expected to settle over 2-3 weeks."
+    }
+  ]
+}

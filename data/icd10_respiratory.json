@@ -1,0 +1,1312 @@
+{
+  "_note": "ICD-10 codes the assistant may suggest. Chapter J (J00-J99) is a WHO 2019 export; codes from chapters A, C, I, R and U were added by hand because a J00-J99 export does not contain them. Block-range rows such as 'J00-J06' were removed - they are headings, not diagnosis codes. Keys beginning with _ are comments.",
+  "title": "ICD-10 respiratory subset",
+  "publisher": "World Health Organization",
+  "edition": "ICD-10 Version:2019",
+  "url": "https://icd.who.int/browse10/2019/en",
+  "codes": [
+    {
+      "code": "J00",
+      "description": "Acute nasopharyngitis [common cold]"
+    },
+    {
+      "code": "J01",
+      "description": "Acute sinusitis"
+    },
+    {
+      "code": "J01.0",
+      "description": "Acute maxillary sinusitis"
+    },
+    {
+      "code": "J01.1",
+      "description": "Acute frontal sinusitis"
+    },
+    {
+      "code": "J01.2",
+      "description": "Acute ethmoidal sinusitis"
+    },
+    {
+      "code": "J01.3",
+      "description": "Acute sphenoidal sinusitis"
+    },
+    {
+      "code": "J01.4",
+      "description": "Acute pansinusitis"
+    },
+    {
+      "code": "J01.8",
+      "description": "Other acute sinusitis"
+    },
+    {
+      "code": "J01.9",
+      "description": "Acute sinusitis, unspecified"
+    },
+    {
+      "code": "J02",
+      "description": "Acute pharyngitis"
+    },
+    {
+      "code": "J02.0",
+      "description": "Streptococcal pharyngitis"
+    },
+    {
+      "code": "J02.8",
+      "description": "Acute pharyngitis due to other specified organisms"
+    },
+    {
+      "code": "J02.9",
+      "description": "Acute pharyngitis, unspecified",
+      "synonyms": [
+        "sore throat"
+      ]
+    },
+    {
+      "code": "J03",
+      "description": "Acute tonsillitis"
+    },
+    {
+      "code": "J03.0",
+      "description": "Streptococcal tonsillitis",
+      "synonyms": [
+        "strep throat"
+      ]
+    },
+    {
+      "code": "J03.8",
+      "description": "Acute tonsillitis due to other specified organisms"
+    },
+    {
+      "code": "J03.9",
+      "description": "Acute tonsillitis, unspecified"
+    },
+    {
+      "code": "J04",
+      "description": "Acute laryngitis and tracheitis"
+    },
+    {
+      "code": "J04.0",
+      "description": "Acute laryngitis"
+    },
+    {
+      "code": "J04.1",
+      "description": "Acute tracheitis"
+    },
+    {
+      "code": "J04.2",
+      "description": "Acute laryngotracheitis"
+    },
+    {
+      "code": "J05",
+      "description": "Acute obstructive laryngitis [croup] and epiglottitis"
+    },
+    {
+      "code": "J05.0",
+      "description": "Acute obstructive laryngitis [croup]"
+    },
+    {
+      "code": "J05.1",
+      "description": "Acute epiglottitis"
+    },
+    {
+      "code": "J06",
+      "description": "Acute upper respiratory infections of multiple and unspecified sites"
+    },
+    {
+      "code": "J06.0",
+      "description": "Acute laryngopharyngitis"
+    },
+    {
+      "code": "J06.8",
+      "description": "Other acute upper respiratory infections of multiple sites"
+    },
+    {
+      "code": "J06.9",
+      "description": "Acute upper respiratory infection, unspecified",
+      "synonyms": [
+        "URTI",
+        "common cold",
+        "upper respiratory tract infection"
+      ]
+    },
+    {
+      "code": "J09",
+      "description": "Influenza due to identified zoonotic or pandemic influenza virus"
+    },
+    {
+      "code": "J10",
+      "description": "Influenza due to identified seasonal influenza virus"
+    },
+    {
+      "code": "J10.0",
+      "description": "Influenza with pneumonia, seasonal influenza virus identified"
+    },
+    {
+      "code": "J10.1",
+      "description": "Influenza with other respiratory manifestations, seasonal influenza virus identified"
+    },
+    {
+      "code": "J10.8",
+      "description": "Influenza with other manifestations, seasonal influenza virus identified"
+    },
+    {
+      "code": "J11",
+      "description": "Influenza, virus not identified"
+    },
+    {
+      "code": "J11.0",
+      "description": "Influenza with pneumonia, virus not identified"
+    },
+    {
+      "code": "J11.1",
+      "description": "Influenza with other respiratory manifestations, virus not identified"
+    },
+    {
+      "code": "J11.8",
+      "description": "Influenza with other manifestations, virus not identified"
+    },
+    {
+      "code": "J12",
+      "description": "Viral pneumonia, not elsewhere classified"
+    },
+    {
+      "code": "J12.0",
+      "description": "Adenoviral pneumonia"
+    },
+    {
+      "code": "J12.1",
+      "description": "Respiratory syncytial virus pneumonia"
+    },
+    {
+      "code": "J12.2",
+      "description": "Parainfluenza virus pneumonia"
+    },
+    {
+      "code": "J12.3",
+      "description": "Human metapneumovirus pneumonia"
+    },
+    {
+      "code": "J12.8",
+      "description": "Other viral pneumonia"
+    },
+    {
+      "code": "J12.9",
+      "description": "Viral pneumonia, unspecified"
+    },
+    {
+      "code": "J13",
+      "description": "Pneumonia due to Streptococcus pneumoniae"
+    },
+    {
+      "code": "J14",
+      "description": "Pneumonia due to Haemophilus influenzae"
+    },
+    {
+      "code": "J15",
+      "description": "Bacterial pneumonia, not elsewhere classified"
+    },
+    {
+      "code": "J15.0",
+      "description": "Pneumonia due to Klebsiella pneumoniae"
+    },
+    {
+      "code": "J15.1",
+      "description": "Pneumonia due to Pseudomonas"
+    },
+    {
+      "code": "J15.2",
+      "description": "Pneumonia due to staphylococcus"
+    },
+    {
+      "code": "J15.3",
+      "description": "Pneumonia due to streptococcus, group B"
+    },
+    {
+      "code": "J15.4",
+      "description": "Pneumonia due to other streptococci"
+    },
+    {
+      "code": "J15.5",
+      "description": "Pneumonia due to Escherichia coli"
+    },
+    {
+      "code": "J15.6",
+      "description": "Pneumonia due to other Gram-negative bacteria"
+    },
+    {
+      "code": "J15.7",
+      "description": "Pneumonia due to Mycoplasma pneumoniae"
+    },
+    {
+      "code": "J15.8",
+      "description": "Other bacterial pneumonia"
+    },
+    {
+      "code": "J15.9",
+      "description": "Bacterial pneumonia, unspecified"
+    },
+    {
+      "code": "J16",
+      "description": "Pneumonia due to other infectious organisms, not elsewhere classified"
+    },
+    {
+      "code": "J16.0",
+      "description": "Chlamydial pneumonia"
+    },
+    {
+      "code": "J16.8",
+      "description": "Pneumonia due to other specified infectious organisms"
+    },
+    {
+      "code": "J17",
+      "description": "Pneumonia in diseases classified elsewhere"
+    },
+    {
+      "code": "J17.0",
+      "description": "Pneumonia in bacterial diseases classified elsewhere"
+    },
+    {
+      "code": "J17.1",
+      "description": "Pneumonia in viral diseases classified elsewhere"
+    },
+    {
+      "code": "J17.2",
+      "description": "Pneumonia in mycoses"
+    },
+    {
+      "code": "J17.3",
+      "description": "Pneumonia in parasitic diseases"
+    },
+    {
+      "code": "J17.8",
+      "description": "Pneumonia in other diseases classified elsewhere"
+    },
+    {
+      "code": "J18",
+      "description": "Pneumonia, organism unspecified"
+    },
+    {
+      "code": "J18.0",
+      "description": "Bronchopneumonia, unspecified"
+    },
+    {
+      "code": "J18.1",
+      "description": "Lobar pneumonia, unspecified"
+    },
+    {
+      "code": "J18.2",
+      "description": "Hypostatic pneumonia, unspecified"
+    },
+    {
+      "code": "J18.8",
+      "description": "Other pneumonia, organism unspecified"
+    },
+    {
+      "code": "J18.9",
+      "description": "Pneumonia, unspecified",
+      "synonyms": [
+        "community-acquired pneumonia",
+        "CAP"
+      ]
+    },
+    {
+      "code": "J20",
+      "description": "Acute bronchitis"
+    },
+    {
+      "code": "J20.0",
+      "description": "Acute bronchitis due to Mycoplasma pneumoniae"
+    },
+    {
+      "code": "J20.1",
+      "description": "Acute bronchitis due to Haemophilus influenzae"
+    },
+    {
+      "code": "J20.2",
+      "description": "Acute bronchitis due to streptococcus"
+    },
+    {
+      "code": "J20.3",
+      "description": "Acute bronchitis due to coxsackievirus"
+    },
+    {
+      "code": "J20.4",
+      "description": "Acute bronchitis due to parainfluenza virus"
+    },
+    {
+      "code": "J20.5",
+      "description": "Acute bronchitis due to respiratory syncytial virus"
+    },
+    {
+      "code": "J20.6",
+      "description": "Acute bronchitis due to rhinovirus"
+    },
+    {
+      "code": "J20.7",
+      "description": "Acute bronchitis due to echovirus"
+    },
+    {
+      "code": "J20.8",
+      "description": "Acute bronchitis due to other specified organisms"
+    },
+    {
+      "code": "J20.9",
+      "description": "Acute bronchitis, unspecified",
+      "synonyms": [
+        "chest infection",
+        "acute bronchitis"
+      ]
+    },
+    {
+      "code": "J21",
+      "description": "Acute bronchiolitis"
+    },
+    {
+      "code": "J21.0",
+      "description": "Acute bronchiolitis due to respiratory syncytial virus"
+    },
+    {
+      "code": "J21.1",
+      "description": "Acute bronchiolitis due to human metapneumovirus"
+    },
+    {
+      "code": "J21.8",
+      "description": "Acute bronchiolitis due to other specified organisms"
+    },
+    {
+      "code": "J21.9",
+      "description": "Acute bronchiolitis, unspecified"
+    },
+    {
+      "code": "J22",
+      "description": "Unspecified acute lower respiratory infection"
+    },
+    {
+      "code": "J30",
+      "description": "Vasomotor and allergic rhinitis"
+    },
+    {
+      "code": "J30.0",
+      "description": "Vasomotor rhinitis"
+    },
+    {
+      "code": "J30.1",
+      "description": "Allergic rhinitis due to pollen"
+    },
+    {
+      "code": "J30.2",
+      "description": "Other seasonal allergic rhinitis"
+    },
+    {
+      "code": "J30.3",
+      "description": "Other allergic rhinitis"
+    },
+    {
+      "code": "J30.4",
+      "description": "Allergic rhinitis, unspecified"
+    },
+    {
+      "code": "J31",
+      "description": "Chronic rhinitis, nasopharyngitis and pharyngitis"
+    },
+    {
+      "code": "J31.0",
+      "description": "Chronic rhinitis"
+    },
+    {
+      "code": "J31.1",
+      "description": "Chronic nasopharyngitis"
+    },
+    {
+      "code": "J31.2",
+      "description": "Chronic pharyngitis"
+    },
+    {
+      "code": "J32",
+      "description": "Chronic sinusitis"
+    },
+    {
+      "code": "J32.0",
+      "description": "Chronic maxillary sinusitis"
+    },
+    {
+      "code": "J32.1",
+      "description": "Chronic frontal sinusitis"
+    },
+    {
+      "code": "J32.2",
+      "description": "Chronic ethmoidal sinusitis"
+    },
+    {
+      "code": "J32.3",
+      "description": "Chronic sphenoidal sinusitis"
+    },
+    {
+      "code": "J32.4",
+      "description": "Chronic pansinusitis"
+    },
+    {
+      "code": "J32.8",
+      "description": "Other chronic sinusitis"
+    },
+    {
+      "code": "J32.9",
+      "description": "Chronic sinusitis, unspecified"
+    },
+    {
+      "code": "J33",
+      "description": "Nasal polyp"
+    },
+    {
+      "code": "J33.0",
+      "description": "Polyp of nasal cavity"
+    },
+    {
+      "code": "J33.1",
+      "description": "Polypoid sinus degeneration"
+    },
+    {
+      "code": "J33.8",
+      "description": "Other polyp of sinus"
+    },
+    {
+      "code": "J33.9",
+      "description": "Nasal polyp, unspecified"
+    },
+    {
+      "code": "J34",
+      "description": "Other disorders of nose and nasal sinuses"
+    },
+    {
+      "code": "J34.0",
+      "description": "Abscess, furuncle and carbuncle of nose"
+    },
+    {
+      "code": "J34.1",
+      "description": "Cyst and mucocele of nose and nasal sinus"
+    },
+    {
+      "code": "J34.2",
+      "description": "Deviated nasal septum"
+    },
+    {
+      "code": "J34.3",
+      "description": "Hypertrophy of nasal turbinates"
+    },
+    {
+      "code": "J34.8",
+      "description": "Other specified disorders of nose and nasal sinuses"
+    },
+    {
+      "code": "J35",
+      "description": "Chronic diseases of tonsils and adenoids"
+    },
+    {
+      "code": "J35.0",
+      "description": "Chronic tonsillitis"
+    },
+    {
+      "code": "J35.1",
+      "description": "Hypertrophy of tonsils"
+    },
+    {
+      "code": "J35.2",
+      "description": "Hypertrophy of adenoids"
+    },
+    {
+      "code": "J35.3",
+      "description": "Hypertrophy of tonsils with hypertrophy of adenoids"
+    },
+    {
+      "code": "J35.8",
+      "description": "Other chronic diseases of tonsils and adenoids"
+    },
+    {
+      "code": "J35.9",
+      "description": "Chronic disease of tonsils and adenoids, unspecified"
+    },
+    {
+      "code": "J36",
+      "description": "Peritonsillar abscess"
+    },
+    {
+      "code": "J37",
+      "description": "Chronic laryngitis and laryngotracheitis"
+    },
+    {
+      "code": "J37.0",
+      "description": "Chronic laryngitis"
+    },
+    {
+      "code": "J37.1",
+      "description": "Chronic laryngotracheitis"
+    },
+    {
+      "code": "J38",
+      "description": "Diseases of vocal cords and larynx, not elsewhere classified"
+    },
+    {
+      "code": "J38.0",
+      "description": "Paralysis of vocal cords and larynx"
+    },
+    {
+      "code": "J38.1",
+      "description": "Polyp of vocal cord and larynx"
+    },
+    {
+      "code": "J38.2",
+      "description": "Nodules of vocal cords"
+    },
+    {
+      "code": "J38.3",
+      "description": "Other diseases of vocal cords"
+    },
+    {
+      "code": "J38.4",
+      "description": "Oedema of larynx"
+    },
+    {
+      "code": "J38.5",
+      "description": "Laryngeal spasm"
+    },
+    {
+      "code": "J38.6",
+      "description": "Stenosis of larynx"
+    },
+    {
+      "code": "J38.7",
+      "description": "Other diseases of larynx"
+    },
+    {
+      "code": "J39",
+      "description": "Other diseases of upper respiratory tract"
+    },
+    {
+      "code": "J39.0",
+      "description": "Retropharyngeal and parapharyngeal abscess"
+    },
+    {
+      "code": "J39.1",
+      "description": "Other abscess of pharynx"
+    },
+    {
+      "code": "J39.2",
+      "description": "Other diseases of pharynx"
+    },
+    {
+      "code": "J39.3",
+      "description": "Upper respiratory tract hypersensitivity reaction, site unspecified"
+    },
+    {
+      "code": "J39.8",
+      "description": "Other specified diseases of upper respiratory tract"
+    },
+    {
+      "code": "J39.9",
+      "description": "Disease of upper respiratory tract, unspecified"
+    },
+    {
+      "code": "J40",
+      "description": "Bronchitis, not specified as acute or chronic"
+    },
+    {
+      "code": "J41",
+      "description": "Simple and mucopurulent chronic bronchitis"
+    },
+    {
+      "code": "J41.0",
+      "description": "Simple chronic bronchitis",
+      "synonyms": [
+        "chronic bronchitis"
+      ]
+    },
+    {
+      "code": "J41.1",
+      "description": "Mucopurulent chronic bronchitis"
+    },
+    {
+      "code": "J41.8",
+      "description": "Mixed simple and mucopurulent chronic bronchitis"
+    },
+    {
+      "code": "J42",
+      "description": "Unspecified chronic bronchitis",
+      "synonyms": [
+        "chronic bronchitis"
+      ]
+    },
+    {
+      "code": "J43",
+      "description": "Emphysema"
+    },
+    {
+      "code": "J43.0",
+      "description": "MacLeod syndrome"
+    },
+    {
+      "code": "J43.1",
+      "description": "Panlobular emphysema"
+    },
+    {
+      "code": "J43.2",
+      "description": "Centrilobular emphysema"
+    },
+    {
+      "code": "J43.8",
+      "description": "Other emphysema"
+    },
+    {
+      "code": "J43.9",
+      "description": "Emphysema, unspecified"
+    },
+    {
+      "code": "J44",
+      "description": "Other chronic obstructive pulmonary disease"
+    },
+    {
+      "code": "J44.0",
+      "description": "Chronic obstructive pulmonary disease with acute lower respiratory infection",
+      "synonyms": [
+        "COPD with chest infection"
+      ]
+    },
+    {
+      "code": "J44.1",
+      "description": "Chronic obstructive pulmonary disease with acute exacerbation, unspecified",
+      "synonyms": [
+        "COPD exacerbation",
+        "infective exacerbation of COPD"
+      ]
+    },
+    {
+      "code": "J44.8",
+      "description": "Other specified chronic obstructive pulmonary disease"
+    },
+    {
+      "code": "J44.9",
+      "description": "Chronic obstructive pulmonary disease, unspecified"
+    },
+    {
+      "code": "J45",
+      "description": "Asthma"
+    },
+    {
+      "code": "J45.0",
+      "description": "Predominantly allergic asthma"
+    },
+    {
+      "code": "J45.1",
+      "description": "Nonallergic asthma"
+    },
+    {
+      "code": "J45.8",
+      "description": "Mixed asthma"
+    },
+    {
+      "code": "J45.9",
+      "description": "Asthma, unspecified",
+      "synonyms": [
+        "asthma attack",
+        "asthma exacerbation"
+      ]
+    },
+    {
+      "code": "J46",
+      "description": "Status asthmaticus",
+      "synonyms": [
+        "severe asthma attack"
+      ]
+    },
+    {
+      "code": "J47",
+      "description": "Bronchiectasis"
+    },
+    {
+      "code": "J60",
+      "description": "Coalworker pneumoconiosis"
+    },
+    {
+      "code": "J61",
+      "description": "Pneumoconiosis due to asbestos and other mineral fibres"
+    },
+    {
+      "code": "J62",
+      "description": "Pneumoconiosis due to dust containing silica"
+    },
+    {
+      "code": "J62.0",
+      "description": "Pneumoconiosis due to talc dust"
+    },
+    {
+      "code": "J62.8",
+      "description": "Pneumoconiosis due to other dust containing silica"
+    },
+    {
+      "code": "J63",
+      "description": "Pneumoconiosis due to other inorganic dusts"
+    },
+    {
+      "code": "J63.0",
+      "description": "Aluminosis (of lung)"
+    },
+    {
+      "code": "J63.1",
+      "description": "Bauxite fibrosis (of lung)"
+    },
+    {
+      "code": "J63.2",
+      "description": "Berylliosis"
+    },
+    {
+      "code": "J63.3",
+      "description": "Graphite fibrosis (of lung)"
+    },
+    {
+      "code": "J63.4",
+      "description": "Siderosis"
+    },
+    {
+      "code": "J63.5",
+      "description": "Stannosis"
+    },
+    {
+      "code": "J63.8",
+      "description": "Pneumoconiosis due to other specified inorganic dusts"
+    },
+    {
+      "code": "J64",
+      "description": "Unspecified pneumoconiosis"
+    },
+    {
+      "code": "J65",
+      "description": "Pneumoconiosis associated with tuberculosis"
+    },
+    {
+      "code": "J66",
+      "description": "Airway disease due to specific organic dust"
+    },
+    {
+      "code": "J66.0",
+      "description": "Byssinosis"
+    },
+    {
+      "code": "J66.1",
+      "description": "Flax-dresser disease"
+    },
+    {
+      "code": "J66.2",
+      "description": "Cannabinosis"
+    },
+    {
+      "code": "J66.8",
+      "description": "Airway disease due to other specific organic dusts"
+    },
+    {
+      "code": "J67",
+      "description": "Hypersensitivity pneumonitis due to organic dust"
+    },
+    {
+      "code": "J67.0",
+      "description": "Farmer lung"
+    },
+    {
+      "code": "J67.1",
+      "description": "Bagassosis"
+    },
+    {
+      "code": "J67.2",
+      "description": "Bird fancier lung"
+    },
+    {
+      "code": "J67.3",
+      "description": "Suberosis"
+    },
+    {
+      "code": "J67.4",
+      "description": "Maltworker lung"
+    },
+    {
+      "code": "J67.5",
+      "description": "Mushroom-worker lung"
+    },
+    {
+      "code": "J67.6",
+      "description": "Maple-bark-stripper lung"
+    },
+    {
+      "code": "J67.7",
+      "description": "Air-conditioner and humidifier lung"
+    },
+    {
+      "code": "J67.8",
+      "description": "Hypersensitivity pneumonitis due to other organic dusts"
+    },
+    {
+      "code": "J67.9",
+      "description": "Hypersensitivity pneumonitis due to unspecified organic dust"
+    },
+    {
+      "code": "J68",
+      "description": "Respiratory conditions due to inhalation of chemicals, gases, fumes and vapours"
+    },
+    {
+      "code": "J68.0",
+      "description": "Bronchitis and pneumonitis due to chemicals, gases, fumes and vapours"
+    },
+    {
+      "code": "J68.1",
+      "description": "Pulmonary oedema due to chemicals, gases, fumes and vapours"
+    },
+    {
+      "code": "J68.2",
+      "description": "Upper respiratory inflammation due to chemicals, gases, fumes and vapours, not elsewhere classified"
+    },
+    {
+      "code": "J68.3",
+      "description": "Other acute and subacute respiratory conditions due to chemicals, gases, fumes and vapours"
+    },
+    {
+      "code": "J68.4",
+      "description": "Chronic respiratory conditions due to chemicals, gases, fumes and vapours"
+    },
+    {
+      "code": "J68.8",
+      "description": "Other respiratory conditions due to chemicals, gases, fumes and vapours"
+    },
+    {
+      "code": "J68.9",
+      "description": "Unspecified respiratory condition due to chemicals, gases, fumes and vapours"
+    },
+    {
+      "code": "J69",
+      "description": "Pneumonitis due to solids and liquids"
+    },
+    {
+      "code": "J69.0",
+      "description": "Pneumonitis due to food and vomit"
+    },
+    {
+      "code": "J69.1",
+      "description": "Pneumonitis due to oils and essences"
+    },
+    {
+      "code": "J69.8",
+      "description": "Pneumonitis due to other solids and liquids"
+    },
+    {
+      "code": "J70",
+      "description": "Respiratory conditions due to other external agents"
+    },
+    {
+      "code": "J70.0",
+      "description": "Acute pulmonary manifestations due to radiation"
+    },
+    {
+      "code": "J70.1",
+      "description": "Chronic and other pulmonary manifestations due to radiation"
+    },
+    {
+      "code": "J70.2",
+      "description": "Acute drug-induced interstitial lung disorders"
+    },
+    {
+      "code": "J70.3",
+      "description": "Chronic drug-induced interstitial lung disorders"
+    },
+    {
+      "code": "J70.4",
+      "description": "Drug-induced interstitial lung disorders, unspecified"
+    },
+    {
+      "code": "J70.8",
+      "description": "Respiratory conditions due to other specified external agents"
+    },
+    {
+      "code": "J70.9",
+      "description": "Respiratory conditions due to unspecified external agent"
+    },
+    {
+      "code": "J80",
+      "description": "Adult respiratory distress syndrome"
+    },
+    {
+      "code": "J81",
+      "description": "Pulmonary oedema"
+    },
+    {
+      "code": "J82",
+      "description": "Pulmonary eosinophilia, not elsewhere classified"
+    },
+    {
+      "code": "J84",
+      "description": "Other interstitial pulmonary diseases"
+    },
+    {
+      "code": "J84.0",
+      "description": "Alveolar and parietoalveolar conditions"
+    },
+    {
+      "code": "J84.1",
+      "description": "Other interstitial pulmonary diseases with fibrosis"
+    },
+    {
+      "code": "J84.8",
+      "description": "Other specified interstitial pulmonary diseases"
+    },
+    {
+      "code": "J84.9",
+      "description": "Interstitial pulmonary disease, unspecified"
+    },
+    {
+      "code": "J85",
+      "description": "Abscess of lung and mediastinum"
+    },
+    {
+      "code": "J85.0",
+      "description": "Gangrene and necrosis of lung"
+    },
+    {
+      "code": "J85.1",
+      "description": "Abscess of lung with pneumonia"
+    },
+    {
+      "code": "J85.2",
+      "description": "Abscess of lung without pneumonia"
+    },
+    {
+      "code": "J85.3",
+      "description": "Abscess of mediastinum"
+    },
+    {
+      "code": "J86",
+      "description": "Pyothorax"
+    },
+    {
+      "code": "J86.0",
+      "description": "Pyothorax with fistula"
+    },
+    {
+      "code": "J86.9",
+      "description": "Pyothorax without fistula"
+    },
+    {
+      "code": "J90",
+      "description": "Pleural effusion, not elsewhere classified",
+      "synonyms": [
+        "pleural effusion"
+      ]
+    },
+    {
+      "code": "J91",
+      "description": "Pleural effusion in conditions classified elsewhere"
+    },
+    {
+      "code": "J92",
+      "description": "Pleural plaque"
+    },
+    {
+      "code": "J92.0",
+      "description": "Pleural plaque with presence of asbestos"
+    },
+    {
+      "code": "J92.9",
+      "description": "Pleural plaque without asbestos"
+    },
+    {
+      "code": "J93",
+      "description": "Pneumothorax"
+    },
+    {
+      "code": "J93.0",
+      "description": "Spontaneous tension pneumothorax"
+    },
+    {
+      "code": "J93.1",
+      "description": "Other spontaneous pneumothorax"
+    },
+    {
+      "code": "J93.8",
+      "description": "Other pneumothorax"
+    },
+    {
+      "code": "J93.9",
+      "description": "Pneumothorax, unspecified"
+    },
+    {
+      "code": "J94",
+      "description": "Other pleural conditions"
+    },
+    {
+      "code": "J94.0",
+      "description": "Chylous effusion"
+    },
+    {
+      "code": "J94.1",
+      "description": "Fibrothorax"
+    },
+    {
+      "code": "J94.2",
+      "description": "Haemothorax"
+    },
+    {
+      "code": "J94.8",
+      "description": "Other specified pleural conditions"
+    },
+    {
+      "code": "J94.9",
+      "description": "Pleural condition, unspecified"
+    },
+    {
+      "code": "J95",
+      "description": "Postprocedural respiratory disorders, not elsewhere classified"
+    },
+    {
+      "code": "J95.0",
+      "description": "Tracheostomy malfunction"
+    },
+    {
+      "code": "J95.1",
+      "description": "Acute pulmonary insufficiency following thoracic surgery"
+    },
+    {
+      "code": "J95.2",
+      "description": "Acute pulmonary insufficiency following nonthoracic surgery"
+    },
+    {
+      "code": "J95.3",
+      "description": "Chronic pulmonary insufficiency following surgery"
+    },
+    {
+      "code": "J95.4",
+      "description": "Mendelson syndrome"
+    },
+    {
+      "code": "J95.5",
+      "description": "Postprocedural subglottic stenosis"
+    },
+    {
+      "code": "J95.8",
+      "description": "Other postprocedural respiratory disorders"
+    },
+    {
+      "code": "J95.9",
+      "description": "Postprocedural respiratory disorder, unspecified"
+    },
+    {
+      "code": "J96",
+      "description": "Respiratory failure, not elsewhere classified"
+    },
+    {
+      "code": "J96.0",
+      "description": "Acute respiratory failure",
+      "synonyms": [
+        "type 1 respiratory failure",
+        "type 2 respiratory failure"
+      ]
+    },
+    {
+      "code": "J96.1",
+      "description": "Chronic respiratory failure"
+    },
+    {
+      "code": "J96.9",
+      "description": "Respiratory failure, unspecified"
+    },
+    {
+      "code": "J98",
+      "description": "Other respiratory disorders"
+    },
+    {
+      "code": "J98.0",
+      "description": "Diseases of bronchus, not elsewhere classified"
+    },
+    {
+      "code": "J98.1",
+      "description": "Pulmonary collapse"
+    },
+    {
+      "code": "J98.2",
+      "description": "Interstitial emphysema"
+    },
+    {
+      "code": "J98.3",
+      "description": "Compensatory emphysema"
+    },
+    {
+      "code": "J98.4",
+      "description": "Other disorders of lung"
+    },
+    {
+      "code": "J98.5",
+      "description": "Diseases of mediastinum, not elsewhere classified"
+    },
+    {
+      "code": "J98.6",
+      "description": "Disorders of diaphragm"
+    },
+    {
+      "code": "J98.7",
+      "description": "Respiratory infections, not elsewhere classified"
+    },
+    {
+      "code": "J98.8",
+      "description": "Other specified respiratory disorders"
+    },
+    {
+      "code": "J98.9",
+      "description": "Respiratory disorder, unspecified"
+    },
+    {
+      "code": "J99",
+      "description": "Respiratory disorders in diseases classified elsewhere"
+    },
+    {
+      "code": "J99.0",
+      "description": "Rheumatoid lung disease"
+    },
+    {
+      "code": "J99.1",
+      "description": "Respiratory disorders in other diffuse connective tissue disorders"
+    },
+    {
+      "code": "J99.8",
+      "description": "Respiratory disorders in other diseases classified elsewhere"
+    },
+    {
+      "code": "A15",
+      "description": "Respiratory tuberculosis, bacteriologically and histologically confirmed",
+      "synonyms": [
+        "TB"
+      ]
+    },
+    {
+      "code": "A15.0",
+      "description": "Tuberculosis of lung, confirmed by sputum microscopy with or without culture",
+      "synonyms": [
+        "smear-positive TB"
+      ]
+    },
+    {
+      "code": "A16",
+      "description": "Respiratory tuberculosis, not confirmed bacteriologically or histologically",
+      "synonyms": [
+        "TB"
+      ]
+    },
+    {
+      "code": "A16.2",
+      "description": "Tuberculosis of lung, without mention of bacteriological or histological confirmation",
+      "synonyms": [
+        "smear-negative TB"
+      ]
+    },
+    {
+      "code": "A19",
+      "description": "Miliary tuberculosis",
+      "synonyms": [
+        "disseminated TB"
+      ]
+    },
+    {
+      "code": "U07.1",
+      "description": "COVID-19, virus identified",
+      "synonyms": [
+        "COVID",
+        "SARS-CoV-2",
+        "coronavirus"
+      ]
+    },
+    {
+      "code": "U07.2",
+      "description": "COVID-19, virus not identified",
+      "synonyms": [
+        "COVID",
+        "suspected COVID"
+      ]
+    },
+    {
+      "code": "C34",
+      "description": "Malignant neoplasm of bronchus and lung",
+      "synonyms": [
+        "lung cancer",
+        "bronchial carcinoma"
+      ]
+    },
+    {
+      "code": "C34.9",
+      "description": "Malignant neoplasm of bronchus or lung, unspecified",
+      "synonyms": [
+        "lung cancer"
+      ]
+    },
+    {
+      "code": "I26",
+      "description": "Pulmonary embolism",
+      "synonyms": [
+        "PE",
+        "pulmonary thromboembolism"
+      ]
+    },
+    {
+      "code": "I26.9",
+      "description": "Pulmonary embolism without mention of acute cor pulmonale",
+      "synonyms": [
+        "PE"
+      ]
+    },
+    {
+      "code": "I50",
+      "description": "Heart failure",
+      "synonyms": [
+        "cardiac failure"
+      ]
+    },
+    {
+      "code": "I50.9",
+      "description": "Heart failure, unspecified",
+      "synonyms": [
+        "congestive cardiac failure"
+      ]
+    },
+    {
+      "code": "R04.2",
+      "description": "Haemoptysis",
+      "synonyms": [
+        "coughing blood",
+        "haemoptysis"
+      ]
+    },
+    {
+      "code": "R05",
+      "description": "Cough"
+    },
+    {
+      "code": "R06.0",
+      "description": "Dyspnoea",
+      "synonyms": [
+        "breathlessness",
+        "shortness of breath"
+      ]
+    },
+    {
+      "code": "R06.2",
+      "description": "Wheezing",
+      "synonyms": [
+        "wheeze"
+      ]
+    },
+    {
+      "code": "R07.1",
+      "description": "Chest pain on breathing",
+      "synonyms": [
+        "pleuritic chest pain"
+      ]
+    },
+    {
+      "code": "R91",
+      "description": "Abnormal findings on diagnostic imaging of lung",
+      "synonyms": [
+        "abnormal chest X-ray"
+      ]
+    }
+  ]
+}

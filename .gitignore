@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.env
+data/chroma_db/
+data/clinic.db
+
+# Reference documents are excluded by default and allow-listed, so a copyrighted PDF
+# added later cannot be committed by accident. WHO publications may be redistributed;
+# GINA, GOLD and NICE are not. Every gitignored source carries a download URL in
+# data/references/sources.json so a fresh clone knows what to fetch.
+data/references/*.pdf
+!data/references/WHO_*.pdf
