@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from patient.profile import PatientProfile
 from patient.report import StoredReport
 from patient.visit import Investigation, PrescribedMedication, Visit
+from triage.schema import TriageRequest
 
 
 class _Strict(BaseModel):
@@ -140,6 +141,26 @@ class AnalyseRequest(_Strict):
 class SoapRequest(_Strict):
     chart: Chart
     include_assistant_differential: bool = True
+
+
+class TriageAssessRequest(_Strict):
+    """One patient at the front desk.
+
+    Note what this is NOT: a `Chart`. Triage happens before a visit exists, so there is
+    nothing to send in `visit`, and requiring one would mean inventing an empty encounter
+    for every walk-in. The triage form stands on its own.
+
+    `profile` is the record when the patient is on file and null when they are not. The
+    engine stores nothing, so a chart it is not sent is a chart it does not have - and
+    the pipeline is built to work either way, because a waiting room is full of people
+    nobody has registered yet.
+    """
+
+    request: TriageRequest
+    profile: Optional[PatientProfile] = None
+    # Skip the model and return the deterministic result alone. Laravel sets this when it
+    # wants a guaranteed-fast answer; the rules produce a complete decision without it.
+    rules_only: bool = False
 
 
 class ErrorResponse(_Strict):

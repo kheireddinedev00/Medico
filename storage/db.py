@@ -58,6 +58,46 @@ CREATE INDEX IF NOT EXISTS idx_reports_patient
     ON reports(patient_id, uploaded_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_reports_visit ON reports(visit_id);
+
+-- Every triage decision ever made, including superseded ones. Append-only: a
+-- re-triage inserts a new row rather than updating the old one, because "what did the
+-- system say when the patient arrived" and "what does it say now" are both questions
+-- the record has to be able to answer. patient_id is nullable and unreferenced on
+-- purpose - a walk-in is triaged before anyone knows who they are.
+CREATE TABLE IF NOT EXISTS triage_results (
+    id              TEXT PRIMARY KEY,
+    patient_id      TEXT,
+    priority        TEXT NOT NULL,
+    rule_priority   TEXT NOT NULL,
+    ai_escalated    INTEGER NOT NULL DEFAULT 0,
+    news2_aggregate INTEGER,
+    status          TEXT NOT NULL,
+    ruleset_version TEXT NOT NULL,
+    model           TEXT,
+    data            TEXT NOT NULL,
+    created_at      TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_triage_patient
+    ON triage_results(patient_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_triage_created
+    ON triage_results(created_at DESC);
+
+-- The current waiting room. One row per person present, keyed by the id of the triage
+-- that admitted them, so a re-triage updates the row instead of adding a second one.
+CREATE TABLE IF NOT EXISTS waiting_room (
+    key         TEXT PRIMARY KEY,
+    patient_id  TEXT,
+    priority    TEXT NOT NULL,
+    arrived_at  TEXT NOT NULL,
+    triaged_at  TEXT NOT NULL,
+    removed_at  TEXT,
+    data        TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_waiting_room_open
+    ON waiting_room(removed_at, arrived_at);
 """
 
 
@@ -78,6 +118,8 @@ def reset(db_path: Optional[str] = None) -> None:
     """Drop all clinical data. Used by the seeder; never call this from the app."""
     conn = connect(db_path)
     with conn:
+        conn.execute("DELETE FROM waiting_room")
+        conn.execute("DELETE FROM triage_results")
         conn.execute("DELETE FROM reports")
         conn.execute("DELETE FROM visits")
         conn.execute("DELETE FROM patients")

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Engine\EngineClient;
+use App\Engine\TriageRunner;
 use App\Models\Patient;
 use App\Models\Visit;
 use App\Models\WaitingRoomEntry;
@@ -12,21 +14,60 @@ use Illuminate\Http\Request;
 /**
  * The nurse's queue.
  *
- * Nothing here reasons clinically and nothing here calls the engine. A patient arrives, a
- * nurse measures them, the doctor takes them through. That is the whole of it.
+ * A patient arrives, a nurse records what they are here about and measures them, the triage
+ * agent scores them, the doctor takes them through in priority order.
  *
- * The triage agent will attach to this controller later — it will fill `suggested_priority`
- * and `priority_reason`, and the nurse's own ordering will stay in `nurse_priority`
- * alongside. Until it exists, the queue is ordered by arrival time, which is the honest
- * default: a system that invents a priority it cannot justify is worse than one that admits
- * it sorts by who came first.
+ * Nothing here reasons clinically. The priority, its rank, its reasons and the recommended
+ * action all come from the engine and are stored as they arrived; this controller decides
+ * who is asked and what is kept, never what the answer is. `App\Engine\TriageRunner` is the
+ * only thing that talks to the agent.
+ *
+ * Two properties are worth defending against the next person who edits this file:
+ *
+ * **An unscored patient is not a low-priority patient.** A row with no vitals sorts last
+ * but is shown as "not scored", because ranking someone LOW on the basis that nobody
+ * measured them is the failure mode most likely to hurt a real person.
+ *
+ * **The nurse's ordering and the agent's live side by side.** `nurse_priority` wins for
+ * sorting; `suggested_priority` is never overwritten. That pair is the audit trail for
+ * "the AI is not making the decisions here", and it is the same shape as the assistant's
+ * differential sitting beside the physician's working diagnosis.
  */
 class WaitingRoomController extends Controller
 {
-    /** The current queue, longest wait first. */
+    /**
+     * The current queue.
+     *
+     * Two orderings, chosen by the caller with `?order=`:
+     *
+     * **priority** (the default) — most urgent first, then longest wait. The ordering is
+     * the engine's, not this method's: `suggested_priority` holds the integer rank the
+     * agent returned as `priority_rank`, so the SQL sorts on a number whose meaning was
+     * decided in one place. No PHP here knows that CRITICAL outranks URGENT.
+     *
+     * Within a priority it is first-come-first-served. Someone who deteriorates keeps
+     * their original arrival time and so keeps their place among their new peers.
+     *
+     * Unscored rows sort last. `NULLS LAST` is spelled out rather than relied upon
+     * because SQLite and MySQL disagree about where nulls go, and the disagreement would
+     * put every unmeasured patient at the top of the queue on one of them.
+     *
+     * **arrival** — purely who came first, ignoring every priority.
+     *
+     * The second exists because "who is next" and "where is Mrs Haddad" are different
+     * questions, and a queue that can only answer the first is annoying enough that
+     * people work around it. It changes the order and nothing else: the priorities are
+     * still computed, still stored, and still shown on every row. Turning the sort off
+     * hides no clinical information — which is the property that makes offering the
+     * switch defensible at all.
+     */
     public function index(Request $request): JsonResponse
     {
         $status = $request->string('status')->value() ?: 'active';
+        // Anything unrecognised falls back to priority. The safe default is the one that
+        // puts the sickest patient first, so a typo in a query string cannot quietly
+        // reorder the room by arrival.
+        $order = $request->string('order')->value() === 'arrival' ? 'arrival' : 'priority';
 
         $entries = WaitingRoomEntry::with('patient:id,full_name,date_of_birth,age_years')
             ->when($status !== 'all', function ($q) use ($status) {
@@ -38,12 +79,37 @@ class WaitingRoomController extends Controller
                     ? $q->whereIn('status', ['waiting', 'in_consultation'])
                     : $q->where('status', $status);
             })
+            ->when($order === 'priority', function ($q) {
+                return $q
+                    ->orderByRaw('CASE WHEN COALESCE(nurse_priority, suggested_priority) IS NULL THEN 1 ELSE 0 END')
+                    ->orderByRaw('COALESCE(nurse_priority, suggested_priority) DESC');
+            })
             ->orderBy('arrived_at')
             ->get();
 
         return response()->json([
+            'order' => $order,
+            // How many people are waiting at each priority, computed over the whole queue
+            // rather than the page. The front end needs this to warn that a CRITICAL
+            // patient is waiting while the list is sorted by arrival and therefore not
+            // showing them at the top.
+            'counts' => $this->countsByPriority($entries),
             'entries' => $entries->map(fn (WaitingRoomEntry $e) => $this->present($e)),
         ]);
+    }
+
+    /** How many are waiting at each priority, and how many have not been scored. */
+    private function countsByPriority($entries): array
+    {
+        $counts = ['CRITICAL' => 0, 'URGENT' => 0, 'STANDARD' => 0, 'LOW' => 0, 'unscored' => 0];
+
+        foreach ($entries as $entry) {
+            $label = $entry->effectivePriorityLabel();
+            $key = $label !== null && array_key_exists($label, $counts) ? $label : 'unscored';
+            $counts[$key]++;
+        }
+
+        return $counts;
     }
 
     /**
@@ -88,11 +154,83 @@ class WaitingRoomController extends Controller
                 'working_diagnosis' => $entry->visit->working_diagnosis_label,
             ] : null,
 
-            // Populated by the triage agent when it exists. Null means "not scored", which
-            // the UI must show as such rather than as a low priority.
-            'suggested_priority' => $entry->suggested_priority,
-            'priority_reason' => $entry->priority_reason,
-            'nurse_priority' => $entry->nurse_priority,
+            // What the patient is here about. Half of the triage decision.
+            'chief_complaint' => $entry->chief_complaint,
+            'triage_notes' => $entry->triage_notes,
+
+            /*
+             * Observations that triage needs and the consultation's Vitals model does not
+             * have. Kept out of `vitals` deliberately: that array is posted to the engine
+             * as a `Vitals`, which is declared extra="forbid", so an extra key there would
+             * turn the doctor's prefill into a 422.
+             */
+            'triage_observations' => [
+                'on_oxygen' => $entry->on_oxygen,
+                'oxygen_delivery' => $entry->oxygen_delivery,
+                'consciousness' => $entry->consciousness,
+                'is_pregnant' => $entry->is_pregnant,
+                'hypercapnic_target_range' => (bool) $entry->hypercapnic_target_range,
+            ],
+
+            'triage' => $this->triageOf($entry),
+        ];
+    }
+
+    /**
+     * The triage decision, as the queue screen needs it.
+     *
+     * `scored` false means the agent has not run — no vitals yet, or the engine was
+     * unreachable when they were taken. The UI must render that as an absence, not as a
+     * priority, which is why there is a boolean here rather than a null priority the
+     * front end has to remember to check.
+     */
+    private function triageOf(WaitingRoomEntry $entry): array
+    {
+        $result = $entry->triage_result;
+
+        return [
+            'scored' => $entry->suggested_priority !== null,
+            // What the queue is sorted on, and the word for it. Both from the engine.
+            'priority' => $entry->effectivePriorityLabel(),
+            'priority_rank' => $entry->effectivePriority(),
+            'reason' => $entry->priority_reason,
+            'computed_at' => $entry->priority_computed_at,
+            'status' => $entry->triage_status,
+            'ruleset_version' => $entry->triage_ruleset_version,
+
+            // True when the model was unreachable and the rules alone decided. The result
+            // is complete and valid; the badge just stops it looking like more than it is.
+            'degraded' => (bool) $entry->triage_degraded,
+
+            // The agent's own answer, kept visible even when a nurse has overridden it —
+            // a disagreement nobody can see is not an audit trail.
+            'suggested_priority' => $entry->suggested_priority_label,
+            'suggested_priority_rank' => $entry->suggested_priority,
+
+            'override' => $entry->nurse_priority === null ? null : [
+                'priority' => $entry->nurse_priority_label,
+                'priority_rank' => $entry->nurse_priority,
+                'reason' => $entry->nurse_priority_reason,
+                'at' => $entry->nurse_priority_at,
+            ],
+
+            // The detail behind the badge, for the row's expanded view.
+            'reasons' => $result['reasons'] ?? [],
+            'concerning_findings' => $result['concerning_findings'] ?? [],
+            'missing_information' => $result['missing_information'] ?? [],
+            'data_quality_issues' => $result['data_quality_issues'] ?? [],
+            'recommended_action' => $result['recommended_action'] ?? null,
+            'news2' => isset($result['news2']) ? [
+                'aggregate' => $result['news2']['aggregate'],
+                'scored_count' => $result['news2']['scored_count'],
+                'expected_count' => $result['news2']['expected_count'],
+                'single_parameter_red' => $result['news2']['single_parameter_red'],
+            ] : null,
+            'red_flags' => collect($result['red_flags'] ?? [])
+                ->map(fn ($f) => ['label' => $f['label'], 'floor' => $f['floor']])
+                ->all(),
+            'ai_escalated' => $result['ai_escalated'] ?? false,
+            'ai_summary' => $result['interpretation']['summary'] ?? null,
         ];
     }
 
@@ -193,6 +331,21 @@ class WaitingRoomController extends Controller
             'spo2' => ['nullable', 'numeric', 'between:50,100'],
             'weight_kg' => ['nullable', 'numeric', 'between:1,400'],
             'height_cm' => ['nullable', 'numeric', 'between:30,250'],
+
+            // The two NEWS2 parameters that are not numbers. Both nullable: not asked and
+            // asked-and-normal are different answers and the engine scores them
+            // differently, so neither may be defaulted here.
+            'on_oxygen' => ['nullable', 'boolean'],
+            'oxygen_delivery' => ['nullable', 'string', 'max:80'],
+            'consciousness' => ['nullable', 'in:alert,confusion,voice,pain,unresponsive'],
+
+            // What the patient says is wrong, and the two facts that change which
+            // thresholds apply.
+            'chief_complaint' => ['nullable', 'string', 'max:1000'],
+            'triage_notes' => ['nullable', 'string', 'max:2000'],
+            'is_pregnant' => ['nullable', 'boolean'],
+            // Only ever set from a documented prescribed 88-92% target. See the migration.
+            'hypercapnic_target_range' => ['nullable', 'boolean'],
         ]);
 
         $before = $this->vitalsOf($entry);
@@ -204,10 +357,147 @@ class WaitingRoomController extends Controller
 
         Auditor::record($request->user()->id, 'waiting_room.vitals', $entry, $before, $this->vitalsOf($entry), $request->ip());
 
+        // Score them. Returns null and logs if the engine is down — the nurse's save has
+        // already succeeded and must not be undone by an unavailable enrichment.
+        $result = TriageRunner::run($entry);
+
+        if ($result !== null) {
+            // The agent's decision is a clinical artefact and is audited like one. Stored
+            // with the rule set version, so a decision can still be explained after the
+            // thresholds change.
+            Auditor::record(
+                $request->user()->id,
+                'waiting_room.triaged',
+                $entry,
+                null,
+                [
+                    'priority' => $result['priority'],
+                    'rule_priority' => $result['rule_priority'],
+                    'ai_escalated' => $result['ai_escalated'],
+                    'status' => $result['status'],
+                    'ruleset_version' => $result['ruleset_version'],
+                    'request_id' => $result['request_id'],
+                ],
+                $request->ip(),
+            );
+        }
+
         return response()->json([
             'entry' => $this->present($entry->fresh()),
             'vitals' => $this->vitalsOf($entry),
+            // Null tells the front end to show "not scored" rather than leaving the last
+            // priority on screen as though it were current.
+            'triaged' => $result !== null,
         ]);
+    }
+
+    /**
+     * Re-score a patient without re-entering their vitals.
+     *
+     * For the two cases the automatic run does not cover: the engine was down when the
+     * vitals were taken, and a patient who has been waiting long enough that their
+     * observations are stale. It does NOT detect deterioration — nothing here can. A
+     * score is a function of the observations, so re-running it on unchanged observations
+     * returns the same answer. Only new measurements change a priority.
+     */
+    public function retriage(Request $request, WaitingRoomEntry $entry): JsonResponse
+    {
+        abort_if(
+            $entry->vitals_taken_at === null,
+            422,
+            'This patient has no recorded observations yet, so there is nothing to score.',
+        );
+
+        $result = TriageRunner::run($entry);
+
+        abort_if(
+            $result === null,
+            503,
+            'The triage engine is not reachable. The patient is unchanged and still unscored.',
+        );
+
+        Auditor::record($request->user()->id, 'waiting_room.retriaged', $entry, null, [
+            'priority' => $result['priority'],
+            'request_id' => $result['request_id'],
+        ], $request->ip());
+
+        return response()->json(['entry' => $this->present($entry->fresh())]);
+    }
+
+    /**
+     * The nurse's own ordering, recorded beside the agent's.
+     *
+     * The agent's answer is never overwritten — `suggested_priority` keeps what it said,
+     * and both travel to the front end so the disagreement is visible. A reason is
+     * required, because an override with no reason is indistinguishable from a misclick
+     * and is worthless when someone asks later why a patient was moved.
+     *
+     * The rank comes from the engine's ladder, fetched rather than hard-coded, so this
+     * controller still does not know what CRITICAL means relative to URGENT.
+     */
+    public function priority(Request $request, WaitingRoomEntry $entry): JsonResponse
+    {
+        $data = $request->validate([
+            'priority' => ['required', 'string', 'in:CRITICAL,URGENT,STANDARD,LOW'],
+            'reason' => ['required', 'string', 'min:3', 'max:500'],
+        ]);
+
+        $rank = $this->rankFor($data['priority']);
+
+        $before = ['nurse_priority' => $entry->nurse_priority_label];
+
+        $entry->forceFill([
+            'nurse_priority' => $rank,
+            'nurse_priority_label' => $data['priority'],
+            'nurse_priority_reason' => $data['reason'],
+            'nurse_priority_by' => $request->user()->id,
+            'nurse_priority_at' => now(),
+        ])->save();
+
+        Auditor::record($request->user()->id, 'waiting_room.priority_override', $entry, $before, [
+            'nurse_priority' => $data['priority'],
+            'reason' => $data['reason'],
+            'agent_priority' => $entry->suggested_priority_label,
+        ], $request->ip());
+
+        return response()->json(['entry' => $this->present($entry->fresh())]);
+    }
+
+    /** Withdraw an override and go back to the agent's ordering. */
+    public function clearPriority(Request $request, WaitingRoomEntry $entry): JsonResponse
+    {
+        $entry->forceFill([
+            'nurse_priority' => null,
+            'nurse_priority_label' => null,
+            'nurse_priority_reason' => null,
+            'nurse_priority_by' => null,
+            'nurse_priority_at' => null,
+        ])->save();
+
+        Auditor::record($request->user()->id, 'waiting_room.priority_cleared', $entry, null, null, $request->ip());
+
+        return response()->json(['entry' => $this->present($entry->fresh())]);
+    }
+
+    /**
+     * The integer for a priority word, from the engine's ladder.
+     *
+     * Cached for the request only. Asking the engine rather than writing the four values
+     * here keeps a single definition of the ordering — the same reason the workflow's
+     * transition table is served rather than copied into PHP.
+     */
+    private function rankFor(string $priority): int
+    {
+        $ladder = collect(EngineClient::fromConfig()->triageRules()['priorities'] ?? [])
+            ->pluck('rank', 'priority');
+
+        abort_if(
+            ! $ladder->has($priority),
+            422,
+            "The engine's rule set does not define a priority called {$priority}.",
+        );
+
+        return (int) $ladder->get($priority);
     }
 
     /**

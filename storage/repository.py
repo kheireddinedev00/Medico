@@ -59,3 +59,10 @@ class ReportRepository(Protocol):
 
     def save(self, report: StoredReport) -> None:
         ...
+
+
+# The triage agent's storage protocol is deliberately NOT here. It lives in
+# `triage/repository.py`, so that importing this module — which clinical/session.py does
+# — does not drag the triage package into the assistant's import path. The dependency
+# runs one way only: storage/triage_repository.py imports triage, and nothing in triage
+# imports storage.

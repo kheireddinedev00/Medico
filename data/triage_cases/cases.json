@@ -1,0 +1,354 @@
+[
+  {
+    "_note": "SYNTHETIC CASES ONLY. Every patient here is invented. No real patient data is used anywhere in this project, and none may be added to this file. `expected` is the reference label the evaluation harness scores against; it is the label a competent triage nurse would assign, decided when the case was written and NOT adjusted afterwards to make the system look better. Where the agent disagrees with a label, that disagreement is the finding.",
+    "id": "case-001", "display_name": "Case 001", "expected": "CRITICAL",
+    "chief_complaint": "Shortness of breath and chest discomfort",
+    "notes": "Symptoms started approximately one hour ago",
+    "age_years": 67, "sex": "male",
+    "vitals": {
+      "temperature_c": 38.9, "heart_rate": 125, "respiratory_rate": 30,
+      "blood_pressure": "100/60", "spo2": 84, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-002", "display_name": "Case 002", "expected": "CRITICAL",
+    "_why": "The case the whole red-flag layer exists for: NEWS2 is 0 and the patient is having a myocardial infarction.",
+    "chief_complaint": "Crushing central chest pressure with sweating",
+    "notes": "Began 40 minutes ago while at rest, radiating to the left arm",
+    "age_years": 58, "sex": "male",
+    "vitals": {
+      "temperature_c": 36.8, "heart_rate": 78, "respiratory_rate": 16,
+      "blood_pressure": "128/76", "spo2": 98, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-003", "display_name": "Case 003", "expected": "CRITICAL",
+    "chief_complaint": "Sudden slurred speech and right arm weakness",
+    "notes": "Noticed by family 25 minutes ago",
+    "age_years": 74, "sex": "female",
+    "vitals": {
+      "temperature_c": 36.6, "heart_rate": 88, "respiratory_rate": 18,
+      "blood_pressure": "168/94", "spo2": 96, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-004", "display_name": "Case 004", "expected": "CRITICAL",
+    "chief_complaint": "Fever and increasing confusion",
+    "symptoms": ["rigors", "reduced urine output"],
+    "age_years": 81, "sex": "female",
+    "vitals": {
+      "temperature_c": 39.5, "heart_rate": 118, "respiratory_rate": 26,
+      "blood_pressure": "88/50", "spo2": 92, "on_oxygen": false, "consciousness": "confusion"
+    }
+  },
+  {
+    "id": "case-005", "display_name": "Case 005", "expected": "CRITICAL",
+    "chief_complaint": "Found unresponsive at home",
+    "age_years": 63, "sex": "male",
+    "vitals": {
+      "temperature_c": 35.4, "heart_rate": 48, "respiratory_rate": 9,
+      "blood_pressure": "96/58", "spo2": 90, "on_oxygen": true, "consciousness": "pain"
+    }
+  },
+  {
+    "id": "case-006", "display_name": "Case 006", "expected": "CRITICAL",
+    "chief_complaint": "Swollen throat and difficulty breathing after a bee sting",
+    "notes": "Sting was 15 minutes ago, lips are swelling",
+    "age_years": 34, "sex": "female",
+    "vitals": {
+      "temperature_c": 36.9, "heart_rate": 122, "respiratory_rate": 24,
+      "blood_pressure": "98/56", "spo2": 94, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-007", "display_name": "Case 007", "expected": "CRITICAL",
+    "chief_complaint": "Vomiting blood",
+    "notes": "Two episodes in the last hour, known liver disease",
+    "age_years": 55, "sex": "male",
+    "vitals": {
+      "temperature_c": 36.2, "heart_rate": 120, "respiratory_rate": 22,
+      "blood_pressure": "94/58", "spo2": 96, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-008", "display_name": "Case 008", "expected": "CRITICAL",
+    "chief_complaint": "Struggling to breathe, cannot finish a sentence",
+    "symptoms": ["wheeze", "using accessory muscles"],
+    "age_years": 29, "sex": "female",
+    "vitals": {
+      "temperature_c": 37.1, "heart_rate": 118, "respiratory_rate": 24,
+      "blood_pressure": "124/78", "spo2": 93, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-009", "display_name": "Case 009", "expected": "URGENT",
+    "_why": "Single-parameter red score. Aggregate is 3, which bands to STANDARD; the respiratory rate alone is what makes this urgent.",
+    "chief_complaint": "Cough for four days",
+    "age_years": 44, "sex": "male",
+    "vitals": {
+      "temperature_c": 37.4, "heart_rate": 84, "respiratory_rate": 26,
+      "blood_pressure": "122/78", "spo2": 96, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-010", "display_name": "Case 010", "expected": "URGENT",
+    "chief_complaint": "Fever and productive cough for three days",
+    "age_years": 71, "sex": "male",
+    "vitals": {
+      "temperature_c": 38.5, "heart_rate": 115, "respiratory_rate": 22,
+      "blood_pressure": "118/70", "spo2": 95, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-011", "display_name": "Case 011", "expected": "URGENT",
+    "chief_complaint": "Worst headache of my life, came on suddenly",
+    "symptoms": ["neck stiffness", "photophobia"],
+    "age_years": 39, "sex": "female",
+    "vitals": {
+      "temperature_c": 37.0, "heart_rate": 92, "respiratory_rate": 18,
+      "blood_pressure": "148/88", "spo2": 98, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-012", "display_name": "Case 012", "expected": "URGENT",
+    "chief_complaint": "Severe abdominal pain since this morning",
+    "age_years": 47, "sex": "female",
+    "vitals": {
+      "temperature_c": 37.8, "heart_rate": 96, "respiratory_rate": 19,
+      "blood_pressure": "132/82", "spo2": 97, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-013", "display_name": "Case 013", "expected": "URGENT",
+    "chief_complaint": "Vomiting and diarrhoea for three days, feels weak",
+    "age_years": 76, "sex": "female",
+    "vitals": {
+      "temperature_c": 37.6, "heart_rate": 112, "respiratory_rate": 22,
+      "blood_pressure": "92/55", "spo2": 96, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-014", "display_name": "Case 014", "expected": "URGENT",
+    "_why": "Context makes it urgent. The observations are near-normal; chemotherapy plus fever is neutropenic sepsis until excluded.",
+    "chief_complaint": "Fever and chills",
+    "notes": "Started chemotherapy two weeks ago",
+    "age_years": 52, "sex": "female",
+    "vitals": {
+      "temperature_c": 38.3, "heart_rate": 100, "respiratory_rate": 18,
+      "blood_pressure": "126/76", "spo2": 97, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-015", "display_name": "Case 015", "expected": "STANDARD",
+    "chief_complaint": "Sore throat and mild fever for two days",
+    "age_years": 26, "sex": "male",
+    "vitals": {
+      "temperature_c": 38.2, "heart_rate": 88, "respiratory_rate": 18,
+      "blood_pressure": "120/78", "spo2": 98, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-016", "display_name": "Case 016", "expected": "STANDARD",
+    "chief_complaint": "Ear pain and blocked nose",
+    "age_years": 33, "sex": "female",
+    "vitals": {
+      "temperature_c": 37.9, "heart_rate": 95, "respiratory_rate": 21,
+      "blood_pressure": "118/74", "spo2": 97, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-017", "display_name": "Case 017", "expected": "STANDARD",
+    "chief_complaint": "Feeling dizzy when standing up",
+    "age_years": 68, "sex": "male",
+    "vitals": {
+      "temperature_c": 36.5, "heart_rate": 48, "respiratory_rate": 16,
+      "blood_pressure": "134/80", "spo2": 97, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-018", "display_name": "Case 018", "expected": "LOW",
+    "chief_complaint": "Repeat prescription for blood pressure tablets",
+    "age_years": 61, "sex": "female",
+    "vitals": {
+      "temperature_c": 36.7, "heart_rate": 74, "respiratory_rate": 16,
+      "blood_pressure": "132/80", "spo2": 98, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-019", "display_name": "Case 019", "expected": "LOW",
+    "chief_complaint": "Small cut on finger from a kitchen knife",
+    "notes": "Bleeding stopped, wants it cleaned and dressed",
+    "age_years": 31, "sex": "male",
+    "vitals": {
+      "temperature_c": 36.6, "heart_rate": 72, "respiratory_rate": 15,
+      "blood_pressure": "124/76", "spo2": 99, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-020", "display_name": "Case 020", "expected": "LOW",
+    "chief_complaint": "Rash on forearm, itchy for a week",
+    "age_years": 45, "sex": "female",
+    "vitals": {
+      "temperature_c": 36.9, "heart_rate": 80, "respiratory_rate": 17,
+      "blood_pressure": "126/78", "spo2": 98, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-021", "display_name": "Case 021", "expected": "LOW",
+    "_why": "Negation. 'No chest pain' must not fire the cardiac flag; a system that cannot read a negative is a system that sends the whole waiting room to CRITICAL.",
+    "chief_complaint": "Sore throat for three days, no chest pain and no breathlessness",
+    "age_years": 24, "sex": "female",
+    "vitals": {
+      "temperature_c": 37.2, "heart_rate": 76, "respiratory_rate": 16,
+      "blood_pressure": "118/72", "spo2": 99, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-022", "display_name": "Case 022", "expected": "STANDARD",
+    "_why": "Incomplete observations. Nobody can show this patient is low risk, so they must not be ranked LOW.",
+    "chief_complaint": "Cough",
+    "age_years": 38, "sex": "male",
+    "vitals": {"temperature_c": 37.3, "consciousness": "alert"}
+  },
+  {
+    "id": "case-023", "display_name": "Case 023", "expected": "STANDARD",
+    "_why": "Implausible heart rate. It is dropped rather than scored, which makes the observations incomplete.",
+    "chief_complaint": "Feeling tired",
+    "age_years": 41, "sex": "female",
+    "vitals": {
+      "temperature_c": 36.8, "heart_rate": 950, "respiratory_rate": 16,
+      "blood_pressure": "120/76", "spo2": 98, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-024", "display_name": "Case 024", "expected": "STANDARD",
+    "_why": "Fahrenheit entered in a Celsius field. 99.1 scored as Celsius is a fever the patient does not have.",
+    "chief_complaint": "Feeling feverish",
+    "age_years": 29, "sex": "male",
+    "vitals": {
+      "temperature_c": 99.1, "heart_rate": 82, "respiratory_rate": 17,
+      "blood_pressure": "122/78", "spo2": 98, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-025", "display_name": "Case 025", "expected": "STANDARD",
+    "_why": "Blood pressure that cannot be parsed. Reported as a data problem, not silently ignored.",
+    "chief_complaint": "Back pain after lifting a box",
+    "age_years": 36, "sex": "male",
+    "vitals": {
+      "temperature_c": 36.7, "heart_rate": 78, "respiratory_rate": 16,
+      "blood_pressure": "see chart", "spo2": 98, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-026", "display_name": "Case 026", "expected": "URGENT",
+    "_why": "Transposed blood pressure. Scored as recorded (systolic 80) and flagged as contradictory - the system does not quietly swap the numbers for the nurse.",
+    "chief_complaint": "Feeling generally unwell",
+    "age_years": 59, "sex": "female",
+    "vitals": {
+      "temperature_c": 36.9, "heart_rate": 88, "respiratory_rate": 18,
+      "blood_pressure": "80/120", "spo2": 97, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-027", "display_name": "Case 027", "expected": "URGENT",
+    "_why": "Out of scope: paediatric. Not scored on the adult scale; escalated and sent to a clinician.",
+    "chief_complaint": "Cough and fever",
+    "age_years": 7, "sex": "male",
+    "vitals": {
+      "temperature_c": 38.4, "heart_rate": 120, "respiratory_rate": 26,
+      "blood_pressure": "100/62", "spo2": 97, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-028", "display_name": "Case 028", "expected": "URGENT",
+    "_why": "Out of scope: pregnancy. The adult scale would read the physiological tachycardia as reassuring.",
+    "chief_complaint": "Feeling lightheaded",
+    "age_years": 28, "sex": "female", "is_pregnant": true,
+    "vitals": {
+      "temperature_c": 36.8, "heart_rate": 102, "respiratory_rate": 18,
+      "blood_pressure": "104/62", "spo2": 98, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-029", "display_name": "Case 029", "expected": "STANDARD",
+    "_why": "NEWS2 Scale 2. A saturation of 90 on oxygen is AT TARGET for this patient, not hypoxia. Compare with case-030, the same numbers without a documented target range.",
+    "chief_complaint": "Routine review, breathing at its usual level",
+    "notes": "Severe COPD with a documented prescribed target range of 88-92%",
+    "age_years": 70, "sex": "male", "hypercapnic_target_range": true,
+    "vitals": {
+      "temperature_c": 36.8, "heart_rate": 88, "respiratory_rate": 18,
+      "blood_pressure": "130/80", "spo2": 90, "on_oxygen": true, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-030", "display_name": "Case 030", "expected": "URGENT",
+    "_why": "The same observations as case-029 with no documented target range. Scale 1 applies and 90% on oxygen is significant hypoxia.",
+    "chief_complaint": "Breathing worse than usual",
+    "age_years": 70, "sex": "male",
+    "vitals": {
+      "temperature_c": 36.8, "heart_rate": 88, "respiratory_rate": 18,
+      "blood_pressure": "130/80", "spo2": 90, "on_oxygen": true, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-031", "display_name": "Case 031", "expected": "LOW",
+    "_why": "No complaint recorded at all. Sorted on observations alone, with the absence reported.",
+    "age_years": 50, "sex": "female",
+    "vitals": {
+      "temperature_c": 36.7, "heart_rate": 76, "respiratory_rate": 16,
+      "blood_pressure": "122/78", "spo2": 98, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-033", "display_name": "Case 033", "expected": "LOW",
+    "_why": "A reported symptom with normal observations now. The patient is describing the last four days; the thermometer is describing this moment. A history of fever is not a reason to move someone ahead of a patient who is abnormal on examination now.",
+    "chief_complaint": "Fever for 4 days",
+    "notes": "Says the temperature has settled since yesterday",
+    "age_years": 30, "sex": "male",
+    "vitals": {
+      "temperature_c": 36.9, "heart_rate": 78, "respiratory_rate": 16,
+      "blood_pressure": "122/78", "spo2": 98, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-034", "display_name": "Case 034", "expected": "STANDARD",
+    "_why": "The same complaint with the fever actually present. One NEWS2 point, and STANDARD - an ordinary febrile illness is not urgent, and the scale says so without needing a rule of its own.",
+    "chief_complaint": "Fever for 4 days",
+    "age_years": 30, "sex": "male",
+    "vitals": {
+      "temperature_c": 38.4, "heart_rate": 88, "respiratory_rate": 18,
+      "blood_pressure": "122/78", "spo2": 97, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-035", "display_name": "Case 035", "expected": "STANDARD",
+    "_why": "Even a high fever with a raised pulse stays STANDARD: NEWS2 4. Fever cannot reach URGENT on its own - it takes a third system going wrong, which is what case-010 has and this does not.",
+    "chief_complaint": "High fever and aching",
+    "age_years": 34, "sex": "female",
+    "vitals": {
+      "temperature_c": 39.2, "heart_rate": 112, "respiratory_rate": 20,
+      "blood_pressure": "124/76", "spo2": 96, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-036", "display_name": "Case 036", "expected": "CRITICAL",
+    "_why": "The counter-case to 033, and the reason 'the observations are normal now' cannot become a blanket rule. Looking well between episodes is the expected course of a syncope, not evidence against it.",
+    "chief_complaint": "Passed out at work this morning, feels fine now",
+    "age_years": 62, "sex": "male",
+    "vitals": {
+      "temperature_c": 36.7, "heart_rate": 76, "respiratory_rate": 16,
+      "blood_pressure": "126/78", "spo2": 98, "on_oxygen": false, "consciousness": "alert"
+    }
+  },
+  {
+    "id": "case-032", "display_name": "Case 032", "expected": "CRITICAL",
+    "chief_complaint": "Took too many paracetamol tablets last night",
+    "notes": "Says she wanted to end her life, now regrets it",
+    "age_years": 22, "sex": "female",
+    "vitals": {
+      "temperature_c": 36.5, "heart_rate": 84, "respiratory_rate": 16,
+      "blood_pressure": "116/70", "spo2": 99, "on_oxygen": false, "consciousness": "alert"
+    }
+  }
+]

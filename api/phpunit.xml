@@ -29,6 +29,10 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- Triage without the model. The deterministic layers decide the priority, so the
+             assertions are unchanged; what goes away is a live free-tier call per test and
+             the flakiness that comes with it. -->
+        <env name="ENGINE_TRIAGE_RULES_ONLY" value="true"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

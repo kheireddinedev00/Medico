@@ -126,6 +126,44 @@ class EngineClient
         ]);
     }
 
+    // --- triage -----------------------------------------------------------------
+
+    /**
+     * Score one patient at the front desk.
+     *
+     * `$profile` is the chart when the patient is registered and null for a walk-in. The
+     * engine is built to work either way; do not fabricate a profile to satisfy it.
+     *
+     * `$rulesOnly` skips the model. The deterministic layers produce a complete decision
+     * without it, so this is the switch to reach for when the queue needs a guaranteed
+     * fast answer rather than the best one.
+     *
+     * The response always contains a priority. A model that is down is reported inside
+     * the result as `interpretation.available = false`, not as a failed call — so the
+     * only thing this can throw is the engine itself being unreachable, or the rule set
+     * being broken, and both of those are real outages worth surfacing.
+     */
+    public function triage(array $request, ?array $profile = null, bool $rulesOnly = false): array
+    {
+        return $this->request('post', '/triage/assess', [
+            'request' => $request,
+            'profile' => $profile,
+            'rules_only' => $rulesOnly,
+        ]);
+    }
+
+    /**
+     * The rule set behind the priorities: the ladder, the actions, the red-flag list.
+     *
+     * Served rather than restated in PHP or React for the same reason `workflow()` is. A
+     * screen that explains a priority using its own copy of the rules is a screen that
+     * will eventually explain a decision the engine did not make.
+     */
+    public function triageRules(): array
+    {
+        return $this->request('get', '/reference/triage-rules');
+    }
+
     // --- reports ----------------------------------------------------------------
 
     /** Transcribe an uploaded report. Interprets nothing. */

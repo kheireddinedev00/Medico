@@ -31,4 +31,17 @@ return [
      * long this takes.
      */
     'extract_timeout' => env('ENGINE_EXTRACT_TIMEOUT', 600),
+
+    /*
+     * Triage without the language model.
+     *
+     * The agent's deterministic layers produce a complete, ordered decision on their own;
+     * the model only adds risk signals it can spot in the wording and may raise a priority
+     * one step. Turning it off therefore degrades the explanation, not the safety.
+     *
+     * On in tests, where a live model call would make the queue tests slow and their
+     * outcome dependent on a free-tier endpoint being awake. Worth turning on in a demo
+     * too, if the room's wifi is not to be trusted.
+     */
+    'triage_rules_only' => env('ENGINE_TRIAGE_RULES_ONLY', false),
 ];

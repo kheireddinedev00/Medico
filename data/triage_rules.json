@@ -1,0 +1,378 @@
+{
+  "_note": "The triage rule set. Every threshold in this file is data, not code: triage/news2.py and triage/red_flags.py contain no numbers of their own. Edit here, re-run the tests, and the behaviour changes. Keys beginning with an underscore are comments and are stripped before validation.",
+  "_editing": "Bands are inclusive. A null min means unbounded below, a null max means unbounded above. Bands within a parameter must not overlap and must cover the whole plausible range; tests/test_news2.py asserts exactly that.",
+
+  "ruleset_version": "news2-2017.1",
+  "verification_status": "TRANSCRIBED - the NEWS2 tables below were written from the published scale and have NOT yet been checked cell-by-cell against the RCP source document. Do this before the capstone defence and before any clinical use, then change this field to VERIFIED and record who checked it.",
+
+  "population": {
+    "min_age_years": 16,
+    "max_age_years": null,
+    "excludes_pregnancy": true,
+    "_rationale": "NEWS2 is validated for acutely ill adults and is explicitly NOT validated for children or for pregnancy - the physiological normals differ enough that the scale under-triages both. A patient outside this scope is not scored on a scale that does not apply to them; they are returned as OUT_OF_SCOPE and sent straight to a clinician."
+  },
+
+  "news2": {
+    "source": {
+      "title": "National Early Warning Score (NEWS) 2: Standardising the assessment of acute-illness severity in the NHS",
+      "publisher": "Royal College of Physicians",
+      "year": 2017,
+      "reference": "RCP, Updated report of a working party. London: RCP, 2017",
+      "url": "https://www.rcp.ac.uk/improving-care/resources/national-early-warning-score-news-2/",
+      "licence_note": "The NEWS2 chart is RCP copyright and free to use for non-commercial purposes; commercial use requires RCP permission. This project is academic and non-commercial."
+    },
+    "parameters": {
+      "respiration_rate": {
+        "label": "Respiration rate",
+        "unit": "breaths/min",
+        "bands": [
+          {"min": null, "max": 8,    "score": 3},
+          {"min": 9,    "max": 11,   "score": 1},
+          {"min": 12,   "max": 20,   "score": 0},
+          {"min": 21,   "max": 24,   "score": 2},
+          {"min": 25,   "max": null, "score": 3}
+        ]
+      },
+      "spo2_scale_1": {
+        "label": "Oxygen saturation (Scale 1)",
+        "unit": "%",
+        "_applies_to": "Every patient without known hypercapnic respiratory failure.",
+        "bands": [
+          {"min": null, "max": 91,   "score": 3},
+          {"min": 92,   "max": 93,   "score": 2},
+          {"min": 94,   "max": 95,   "score": 1},
+          {"min": 96,   "max": null, "score": 0}
+        ]
+      },
+      "spo2_scale_2_on_air": {
+        "label": "Oxygen saturation (Scale 2, breathing air)",
+        "unit": "%",
+        "_applies_to": "Patients with confirmed hypercapnic respiratory failure and a prescribed target range of 88-92%, typically severe COPD. Using Scale 2 on the wrong patient hides real hypoxia, so triage/news2.py only selects it when the request says so explicitly.",
+        "bands": [
+          {"min": null, "max": 83,   "score": 3},
+          {"min": 84,   "max": 85,   "score": 2},
+          {"min": 86,   "max": 87,   "score": 1},
+          {"min": 88,   "max": 92,   "score": 0},
+          {"min": 93,   "max": null, "score": 0}
+        ]
+      },
+      "spo2_scale_2_on_oxygen": {
+        "label": "Oxygen saturation (Scale 2, on oxygen)",
+        "unit": "%",
+        "_applies_to": "Same patients as above, while receiving supplemental oxygen. A saturation ABOVE the target range scores here, because in hypercapnic respiratory failure over-oxygenation is itself the danger.",
+        "bands": [
+          {"min": null, "max": 83,   "score": 3},
+          {"min": 84,   "max": 85,   "score": 2},
+          {"min": 86,   "max": 87,   "score": 1},
+          {"min": 88,   "max": 92,   "score": 0},
+          {"min": 93,   "max": 94,   "score": 1},
+          {"min": 95,   "max": 96,   "score": 2},
+          {"min": 97,   "max": null, "score": 3}
+        ]
+      },
+      "air_or_oxygen": {
+        "label": "Supplemental oxygen",
+        "unit": "boolean",
+        "_note": "Scored as a parameter in its own right: a normal saturation held up by oxygen is not the same as a normal saturation on air.",
+        "values": {"air": 0, "oxygen": 2}
+      },
+      "systolic_bp": {
+        "label": "Systolic blood pressure",
+        "unit": "mmHg",
+        "bands": [
+          {"min": null, "max": 90,   "score": 3},
+          {"min": 91,   "max": 100,  "score": 2},
+          {"min": 101,  "max": 110,  "score": 1},
+          {"min": 111,  "max": 219,  "score": 0},
+          {"min": 220,  "max": null, "score": 3}
+        ]
+      },
+      "pulse": {
+        "label": "Pulse",
+        "unit": "beats/min",
+        "bands": [
+          {"min": null, "max": 40,   "score": 3},
+          {"min": 41,   "max": 50,   "score": 1},
+          {"min": 51,   "max": 90,   "score": 0},
+          {"min": 91,   "max": 110,  "score": 1},
+          {"min": 111,  "max": 130,  "score": 2},
+          {"min": 131,  "max": null, "score": 3}
+        ]
+      },
+      "consciousness": {
+        "label": "Consciousness (ACVPU)",
+        "unit": "scale",
+        "_note": "New confusion counts the same as a reduced conscious level. NEWS2 added this to NEWS deliberately, because delirium is an early and frequently missed sign of acute illness.",
+        "values": {
+          "alert": 0,
+          "confusion": 3,
+          "voice": 3,
+          "pain": 3,
+          "unresponsive": 3
+        }
+      },
+      "temperature": {
+        "label": "Temperature",
+        "unit": "degrees Celsius",
+        "bands": [
+          {"min": null, "max": 35.0, "score": 3},
+          {"min": 35.1, "max": 36.0, "score": 1},
+          {"min": 36.1, "max": 38.0, "score": 0},
+          {"min": 38.1, "max": 39.0, "score": 1},
+          {"min": 39.1, "max": null, "score": 2}
+        ]
+      }
+    }
+  },
+
+  "escalation": {
+    "_note": "NEWS2 publishes a clinical response, not a waiting-room priority. This block is the mapping from one to the other, and it is the single most arguable thing in this file - which is why it is here as data and stated explicitly, rather than buried in an if-statement.",
+    "bands": [
+      {
+        "min_aggregate": 0, "max_aggregate": 0, "priority": "LOW",
+        "recommended_action": "Routine assessment in turn.",
+        "_news2_response": "Routine monitoring."
+      },
+      {
+        "min_aggregate": 1, "max_aggregate": 4, "priority": "STANDARD",
+        "recommended_action": "Assessment in turn by a clinician; repeat observations if the wait is long.",
+        "_news2_response": "Assessment by a registered nurse, who decides whether escalation is needed."
+      },
+      {
+        "min_aggregate": 5, "max_aggregate": 6, "priority": "URGENT",
+        "recommended_action": "Urgent clinical assessment - bring forward in the queue.",
+        "_news2_response": "Key threshold for urgent response; urgent review by a clinician."
+      },
+      {
+        "min_aggregate": 7, "max_aggregate": null, "priority": "CRITICAL",
+        "recommended_action": "Immediate clinical assessment - do not leave in the waiting room.",
+        "_news2_response": "Emergency response; continuous monitoring; critical care involvement."
+      }
+    ],
+    "single_parameter_floor": {
+      "trigger_score": 3,
+      "priority": "URGENT",
+      "reason": "One vital sign scoring 3 is a NEWS2 red score and calls for urgent review even when the aggregate is low.",
+      "_rationale": "A patient with a respiratory rate of 26 and nothing else wrong aggregates to 3 - a STANDARD band - while being the exact presentation this rule was added to catch."
+    },
+    "ai_escalation": {
+      "to_priority": "URGENT",
+      "_rationale": "What the AI layer's one lever does. It raises the patient TO this priority, and no further, whatever the model says. Two properties fall out: the model can always get a patient looked at promptly when it spots something the phrase list missed, and it can never on its own declare a CRITICAL - that claim stays with the deterministic rules and the clinician. An earlier version escalated by one level instead, which put a model-detected probable acute coronary syndrome at STANDARD: too weak to be worth having. Set this to CRITICAL only if you are willing to let a free-tier model empty the top of the queue.",
+      "_note": "This can only ever raise a priority. A floor already above it is untouched - see decision.py, where every combination goes through highest()."
+    },
+    "out_of_scope_floor": {
+      "priority": "URGENT",
+      "_rationale": "A patient this rule set is not validated for (a child, a pregnant patient) is not scored at all, so there is no evidence they are safe to wait. URGENT is deliberate over-triage: it is the cost of admitting the scale does not apply, and it is far cheaper than a paediatric patient scored on adult thresholds and ranked LOW."
+    },
+    "insufficient_data_floor": {
+      "priority": "STANDARD",
+      "_rationale": "A patient whose observations are half-missing cannot be shown to be low risk. Ranking them LOW would mean an incomplete form pushes someone DOWN the queue, which is the failure mode most likely to hurt a real patient. STANDARD plus a visible incomplete marker is the safe default."
+    }
+  },
+
+  "waiting_room": {
+    "_note": "Operational policy rather than clinical thresholds, but it lives here so everything tunable is in one reviewed file.",
+    "tie_break": "arrival",
+    "_tie_break_rationale": "Two patients at the same priority are seen in the order they arrived. The alternative - ordering by NEWS2 within a priority - was rejected: it makes the queue reshuffle every time anyone is re-measured, it is not a use the scale's granularity supports, and 'the machine moved me down after I had waited an hour' is the kind of thing that destroys trust in a triage system. Set to 'severity' to order by NEWS2 aggregate within a priority instead.",
+    "retriage_interval_minutes": {
+      "CRITICAL": 0,
+      "URGENT": 15,
+      "STANDARD": 60,
+      "LOW": 120
+    },
+    "_retriage_rationale": "How long a patient may wait at each priority before their observations are stale and the queue position should not be trusted. CRITICAL is 0 because a CRITICAL patient should not be in the waiting room at all - the entry is flagged for review immediately and continuously."
+  },
+
+  "validation": {
+    "_note": "Plausible physiological ranges, used to reject data-entry errors. Wider than any survivable range on purpose: the job here is to catch a transposed digit or a Fahrenheit reading, not to second-guess a genuinely extreme measurement.",
+    "plausible": {
+      "temperature_c":    {"min": 25.0, "max": 45.0},
+      "heart_rate":       {"min": 10,   "max": 300},
+      "respiratory_rate": {"min": 2,    "max": 80},
+      "systolic_bp":      {"min": 40,   "max": 300},
+      "diastolic_bp":     {"min": 10,   "max": 200},
+      "spo2":             {"min": 30,   "max": 100},
+      "weight_kg":        {"min": 20,   "max": 400},
+      "height_cm":        {"min": 100,  "max": 250},
+      "age_years":        {"min": 0,    "max": 130}
+    },
+    "unit_suspicion": {
+      "_note": "Values that are inside the plausible range for the WRONG unit. Flagged as suspect rather than rejected, because each is also a real (if unusual) reading in the right one.",
+      "temperature_fahrenheit_range": {"min": 94.0, "max": 108.0},
+      "weight_pounds_min": 200,
+      "height_inches_max": 96
+    },
+    "_required_note": "These are field names on triage.schema.NormalisedVitals, not free text. A name that does not exist there would silently never be reported as missing, so load_rules checks them against the plausible ranges above.",
+    "required_for_full_score": [
+      "respiratory_rate", "spo2", "systolic_bp", "heart_rate", "consciousness", "temperature_c"
+    ]
+  },
+
+  "red_flags": {
+    "_note": "Presentational red flags: patterns in the chief complaint and symptoms that demand priority regardless of how reassuring the vital signs are. This layer exists because NEWS2 scores physiology only, and the patient with crushing central chest pain and a NEWS2 of 0 is the one it will miss.",
+    "_matching": "Case-insensitive substring match on the complaint, symptoms and notes, after negation stripping. Deliberately crude: this layer is a safety net that must be readable by a clinician and must never depend on a model. The AI layer catches the phrasings this misses; it can only ever raise the priority further.",
+    "_verification": "The floors below are the authors' mapping of widely taught emergency red flags onto this four-level scale. They are consistent with standard emergency triage teaching but have not been transcribed from a single citable table - treat the source field as the intended authority, not as a page-level citation, until verified.",
+    "flags": [
+      {
+        "id": "cardiac_chest_pain", "floor": "CRITICAL",
+        "label": "Chest pain with features suggesting acute coronary syndrome",
+        "any_of": ["chest pain", "chest pressure", "chest tightness", "chest discomfort", "crushing chest", "pain in my chest", "angina"],
+        "reason": "Chest pain of possible cardiac origin needs an ECG within minutes of arrival; it cannot wait for a queue position.",
+        "source": "Standard emergency triage practice; ECG within 10 minutes of arrival for suspected ACS."
+      },
+      {
+        "id": "stroke_symptoms", "floor": "CRITICAL",
+        "label": "Symptoms suggesting acute stroke",
+        "any_of": ["facial droop", "face drooping", "slurred speech", "sudden weakness", "one-sided weakness", "one sided weakness", "arm weakness", "cannot speak", "unable to speak", "sudden numbness", "hemiplegia", "stroke"],
+        "reason": "Time-critical: thrombolysis and thrombectomy are governed by a window measured in hours from onset.",
+        "source": "FAST screening; national stroke pathways."
+      },
+      {
+        "id": "airway_compromise", "floor": "CRITICAL",
+        "label": "Threatened airway",
+        "any_of": ["stridor", "choking", "cannot breathe", "unable to breathe", "gasping", "drooling", "throat closing", "swollen tongue", "swollen throat"],
+        "reason": "An airway that is closing kills faster than anything else in the waiting room.",
+        "source": "ABCDE primary survey; airway takes precedence over all other findings."
+      },
+      {
+        "id": "anaphylaxis", "floor": "CRITICAL",
+        "label": "Possible anaphylaxis",
+        "any_of": ["anaphylaxis", "anaphylactic", "allergic reaction", "bee sting", "wasp sting", "epipen", "epi-pen"],
+        "reason": "Anaphylaxis needs intramuscular adrenaline immediately; deterioration is measured in minutes.",
+        "source": "Resuscitation Council anaphylaxis algorithm."
+      },
+      {
+        "id": "severe_haemorrhage", "floor": "CRITICAL",
+        "label": "Severe or uncontrolled bleeding",
+        "any_of": ["severe bleeding", "heavy bleeding", "uncontrolled bleeding", "bleeding heavily", "haemorrhage", "hemorrhage", "spurting", "vomiting blood", "coughing up blood", "haematemesis", "hematemesis", "massive haemoptysis", "blood in vomit"],
+        "reason": "Ongoing blood loss produces normal vitals until it abruptly does not; compensation fails late and fast.",
+        "source": "Major haemorrhage recognition; compensated shock precedes decompensation."
+      },
+      {
+        "id": "altered_consciousness", "floor": "CRITICAL",
+        "label": "Loss of consciousness, seizure or new confusion",
+        "any_of": ["unconscious", "unresponsive", "passed out", "fainted", "collapse", "collapsed", "loss of consciousness", "blacked out", "seizure", "fitting", "convulsion", "not making sense", "suddenly confused", "new confusion"],
+        "reason": "A reduced or fluctuating conscious level is a top-tier presentation whatever the cause.",
+        "source": "ACVPU; any patient below Alert requires immediate assessment."
+      },
+      {
+        "id": "sepsis_pattern", "floor": "CRITICAL",
+        "label": "Possible sepsis",
+        "any_of": ["sepsis", "septic", "mottled", "non-blanching rash", "non blanching rash", "purpuric rash", "rigors", "shivering uncontrollably"],
+        "reason": "Sepsis mortality rises measurably with every hour of delay to antibiotics.",
+        "source": "Sepsis recognition and the one-hour bundle."
+      },
+      {
+        "id": "self_harm_overdose", "floor": "CRITICAL",
+        "label": "Overdose, poisoning or acute self-harm risk",
+        "any_of": ["overdose", "took too many", "poisoning", "swallowed", "self harm", "self-harm", "cut myself", "suicidal", "want to die", "kill myself", "end my life"],
+        "reason": "Both the toxicological and the psychiatric risk are time-critical, and the patient must not be left unobserved.",
+        "source": "Toxicology and mental-health triage practice; do not leave a patient at risk of self-harm unobserved."
+      },
+      {
+        "id": "obstetric_emergency", "floor": "CRITICAL",
+        "label": "Obstetric emergency",
+        "any_of": ["pregnant and bleeding", "bleeding in pregnancy", "vaginal bleeding", "in labour", "in labor", "waters broke", "contractions", "reduced fetal movement", "reduced foetal movement", "baby not moving", "eclampsia", "pre-eclampsia"],
+        "reason": "Two patients, one of whom cannot be assessed from the waiting room.",
+        "source": "Obstetric triage; any bleeding or reduced fetal movement warrants immediate assessment."
+      },
+      {
+        "id": "major_trauma", "floor": "CRITICAL",
+        "label": "High-energy trauma mechanism",
+        "any_of": ["road traffic", "car accident", "hit by a car", "motorbike accident", "fell from height", "fall from height", "stabbed", "stab wound", "gunshot", "crush injury", "assault to the head"],
+        "reason": "Mechanism predicts injuries that are not yet visible; occult haemorrhage presents late.",
+        "source": "Major trauma triage tools; mechanism-based escalation."
+      },
+      {
+        "id": "testicular_torsion", "floor": "CRITICAL",
+        "label": "Acute testicular pain",
+        "any_of": ["testicular pain", "testicle pain", "pain in testicle", "scrotal pain", "swollen testicle"],
+        "reason": "Torsion is organ-threatening within hours and is a diagnosis made in theatre, not in a waiting room.",
+        "source": "Urological emergency; salvage rate falls sharply after six hours."
+      },
+      {
+        "id": "severe_breathlessness", "floor": "CRITICAL",
+        "label": "Severe respiratory distress",
+        "any_of": ["cannot finish a sentence", "struggling to breathe", "fighting for breath", "severe shortness of breath", "severe breathlessness", "respiratory distress", "using accessory muscles", "silent chest"],
+        "reason": "Speaking in single words, accessory-muscle use and a silent chest are late signs and precede arrest.",
+        "source": "Acute asthma and COPD severity assessment (GINA, GOLD)."
+      },
+      {
+        "id": "aortic_pattern", "floor": "CRITICAL",
+        "label": "Possible aortic dissection or ruptured aneurysm",
+        "any_of": ["tearing pain", "ripping pain", "pain radiating to my back", "tearing chest pain", "back pain and fainting"],
+        "reason": "Aortic catastrophe is immediately life-threatening and is frequently mistaken for musculoskeletal pain.",
+        "source": "Aortic emergency red flags."
+      },
+      {
+        "id": "meningitis_pattern", "floor": "URGENT",
+        "label": "Headache with meningitic or thunderclap features",
+        "any_of": ["worst headache", "thunderclap", "sudden severe headache", "neck stiffness", "stiff neck", "photophobia", "light hurts my eyes"],
+        "reason": "Subarachnoid haemorrhage and meningitis both present this way and both worsen with delay.",
+        "source": "Headache red flags; sudden-onset severe headache requires urgent imaging."
+      },
+      {
+        "id": "acute_abdomen", "floor": "URGENT",
+        "label": "Severe abdominal pain",
+        "any_of": ["severe abdominal pain", "severe stomach pain", "rigid abdomen", "cannot straighten up", "tearing abdominal", "sudden severe abdominal"],
+        "reason": "A rigid or severely painful abdomen can be perforation, obstruction or a leaking aneurysm.",
+        "source": "Acute abdomen assessment; peritonism warrants urgent surgical review."
+      },
+      {
+        "id": "cauda_equina", "floor": "URGENT",
+        "label": "Possible cauda equina syndrome",
+        "any_of": ["cannot pass urine", "urinary retention", "saddle numbness", "numb between my legs", "bowel incontinence", "loss of bowel control"],
+        "reason": "Delayed decompression means permanent bladder, bowel and sexual dysfunction.",
+        "source": "Cauda equina red flags; emergency MRI and surgical referral."
+      },
+      {
+        "id": "acute_vision_loss", "floor": "URGENT",
+        "label": "Sudden visual loss or acute red eye",
+        "any_of": ["sudden vision loss", "lost my vision", "sudden blurred vision", "curtain over my eye", "painful red eye"],
+        "reason": "Retinal artery occlusion, acute glaucoma and giant cell arteritis are all sight-threatening within hours.",
+        "source": "Ophthalmic emergencies."
+      },
+      {
+        "id": "limb_ischaemia", "floor": "URGENT",
+        "label": "Possible acute limb ischaemia",
+        "any_of": ["cold pale leg", "cold pale arm", "limb is white", "no pulse in", "leg went numb and cold", "blue toes"],
+        "reason": "The six-hour window for limb salvage starts at symptom onset, not at arrival.",
+        "source": "Acute limb ischaemia; the six Ps."
+      },
+      {
+        "id": "vte_pattern", "floor": "URGENT",
+        "label": "Possible venous thromboembolism",
+        "any_of": ["calf swelling", "swollen calf", "one leg swollen", "leg swelling and breathless", "pleuritic pain", "pain on breathing in"],
+        "reason": "Pulmonary embolism is the commonest cause of a normal-looking patient deteriorating in a waiting room.",
+        "source": "VTE risk assessment; PE presents with normal vital signs in a substantial minority of cases."
+      },
+      {
+        "id": "diabetic_emergency", "floor": "URGENT",
+        "label": "Possible diabetic emergency",
+        "any_of": ["hypoglycaemia", "hypoglycemia", "blood sugar is low", "blood sugar very high", "ketones", "diabetic and vomiting", "fruity breath"],
+        "reason": "Hypoglycaemia and ketoacidosis both deteriorate quickly and both are correctable at the front door.",
+        "source": "Diabetic emergency guidance."
+      },
+      {
+        "id": "immunosuppressed_fever", "floor": "URGENT",
+        "label": "Fever in an immunosuppressed patient",
+        "any_of": ["chemotherapy", "neutropenic", "neutropenia", "transplant", "immunosuppressed", "on steroids long term"],
+        "and_any_of": ["fever", "feverish", "chills", "rigors", "high temperature"],
+        "reason": "Neutropenic sepsis can present with almost nothing and needs antibiotics within an hour.",
+        "source": "Neutropenic sepsis pathways; treat as an emergency until excluded."
+      },
+      {
+        "id": "extremes_of_pain", "floor": "URGENT",
+        "label": "Pain described as the worst imaginable",
+        "any_of": ["worst pain", "10 out of 10 pain", "unbearable pain", "excruciating", "screaming in pain"],
+        "reason": "Severe pain is both a triage priority in its own right and a marker of serious underlying pathology.",
+        "source": "Pain-based triage discriminators used in flowchart triage systems."
+      }
+    ],
+    "negation_cues": [
+      "no ", "not ", "denies ", "denied ", "without ", "never ", "negative for ", "free of ", "ruled out ", "resolved "
+    ],
+    "_negation_window_rationale": "How many characters before a matched phrase are searched for a negation cue. 15 is chosen from the failure at 28: 'no fever but severe chest pain' put the cue inside a 28-character window and suppressed a real cardiac flag. 15 still catches every direct negation ('no chest pain', 'denies chest pain', 'headache without neck stiffness') while scoping the cue to its own clause. Widening this trades missed red flags for fewer false alarms, which is the wrong direction for triage.",
+    "negation_window_chars": 15
+  }
+}

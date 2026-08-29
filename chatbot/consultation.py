@@ -16,13 +16,9 @@ belongs to the consultation state machine.
 
 from __future__ import annotations
 
-from typing import Type, TypeVar
-
 from langchain_core.documents import Document
-from langchain_core.messages import HumanMessage, SystemMessage
-from pydantic import BaseModel
 
-from chatbot.llm import get_llm
+from chatbot.llm import get_llm, run_structured
 from chatbot.prompt import SYSTEM_PROMPT
 from clinical.differential import (
     Assessment,
@@ -31,23 +27,19 @@ from clinical.differential import (
     RawAssessment,
     build_assessment,
 )
-from clinical.json_reply import ReplyError, parse_model
 from config import EVIDENCE_CHUNKS
 from patient.history import ClinicalContext, format_findings
 from patient.visit import Visit
 from rag.retriever import get_retriever
 
-# One corrective retry. Small free models occasionally wrap JSON in prose or drop a key;
-# a single reminder recovers most of those. Beyond that the failure is real and the raw
-# reply is surfaced rather than being retried into a different kind of wrong.
-_RETRY_NOTE = (
-    "Your previous reply was not a single valid JSON object matching the required "
-    "schema. Return ONLY the JSON object, with every key present, and no other text."
-)
+# `run_structured` moved to chatbot/llm.py when the triage agent needed it too - it is
+# model plumbing, not consultation logic. Re-exported here because clinical/session.py
+# and the tests import it from this module, and moving a function is not a reason to
+# make callers care.
+__all__ = ["assess", "run_structured", "build_retrieval_query", "to_evidence",
+           "format_evidence", "build_user_message"]
 
 _SNIPPET_CHARS = 300
-
-T = TypeVar("T", bound=BaseModel)
 
 
 def build_retrieval_query(context: ClinicalContext, findings: Visit) -> str:
@@ -117,31 +109,6 @@ def build_user_message(
             format_evidence(docs),
         ]
     )
-
-
-def run_structured(
-    system_prompt: str,
-    blocks: list[str],
-    model_cls: Type[T],
-    llm=None,
-    error_cls: type = ReplyError,
-) -> T:
-    """One request to the model, parsed into `model_cls`, with a single corrective retry.
-
-    Every clinical service goes through here, so they all share the same failure
-    behaviour: try once, remind once, then surface the raw reply rather than retrying
-    into a different kind of wrong.
-    """
-    llm = llm if llm is not None else get_llm()
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content="\n\n".join(blocks)),
-    ]
-    try:
-        return parse_model(llm.invoke(messages).content, model_cls, error_cls)
-    except error_cls:
-        messages.append(HumanMessage(content=_RETRY_NOTE))
-        return parse_model(llm.invoke(messages).content, model_cls, error_cls)
 
 
 def assess(

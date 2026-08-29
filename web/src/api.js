@@ -97,14 +97,32 @@ export const api = {
 
   // --- waiting room ---
   // 'active' = waiting or with the doctor. Someone being seen has not left the room.
-  queue: (status = 'active') => get(`/waiting-room?status=${status}`),
+  // order: 'priority' (sickest first) or 'arrival' (purely who came first). The sort is
+  // done by the API, not here — the ordering rule belongs with the ranks it sorts on.
+  queue: (status = 'active', order = 'priority') =>
+    get(`/waiting-room?status=${status}&order=${order}`),
   // visitId null means a new problem; set means they are back about that open visit.
   arrive: (patientId, visitId = null) => post('/waiting-room', { patient_id: patientId, visit_id: visitId }),
   setQueueVisit: (entryId, visitId) => post(`/waiting-room/${entryId}/visit`, { visit_id: visitId }),
   resumableVisits: (patientId) => get(`/patients/${patientId}/resumable-visits`),
+  // Saving vitals also triages. One call, because a nurse who has to press a second
+  // button to score someone will eventually not press it.
   recordVitals: (entryId, vitals) => post(`/waiting-room/${entryId}/vitals`, vitals),
   markSeen: (entryId, visitId) => post(`/waiting-room/${entryId}/seen`, { visit_id: visitId }),
   removeFromQueue: (entryId) => del(`/waiting-room/${entryId}`),
+
+  // --- triage ---
+  // Re-score without re-entering observations: the engine was down at the time, or the
+  // readings have gone stale. It cannot find deterioration — only new measurements can.
+  retriage: (entryId) => post(`/waiting-room/${entryId}/retriage`),
+  // The clinician disagreeing with the agent. A reason is required by the API, not just
+  // by the form, so an override always has something to read next to it later.
+  setPriority: (entryId, priority, reason) =>
+    post(`/waiting-room/${entryId}/priority`, { priority, reason }),
+  clearPriority: (entryId) => del(`/waiting-room/${entryId}/priority`),
+  // The ladder, the actions and the red-flag list, from the engine. Fetched rather than
+  // written here so the UI cannot explain a priority the engine did not decide.
+  triageRules: () => get('/triage/rules'),
 
   // --- consultation ---
   openConsultation: (patientId) => post('/consultations', { patient_id: patientId }),

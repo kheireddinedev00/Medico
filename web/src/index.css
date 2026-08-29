@@ -247,6 +247,24 @@ textarea { resize: vertical; }
 .vitals { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; margin: 8px 0; }
 .vitals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
 
+/* The patient's own words, on the queue row. Quoted and set apart from the system's
+   language, so what the patient said never reads as something the system concluded. */
+.complaint {
+  margin: 6px 0; font-size: 14px; color: var(--fg);
+  border-left: 3px solid var(--border); padding-left: 10px;
+}
+
+/* The triage decision. Deliberately quiet: the badge carries the priority, and this is
+   the reasoning underneath it, which is read only when someone asks why. */
+.triage { margin: 8px 0; display: flex; flex-direction: column; gap: 4px; }
+.triage-detail {
+  margin-top: 8px; padding: 12px 14px; border-radius: var(--radius);
+  background: var(--ai-bg); color: var(--ai-fg);
+}
+.triage-section { margin-bottom: 10px; }
+.triage-section ul { margin: 4px 0 0; padding-left: 18px; }
+.triage-section li { margin: 2px 0; }
+
 .avatar {
   width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
   background: var(--accent-soft); color: var(--accent); font-weight: 700; flex: none;

@@ -70,9 +70,14 @@ from service.schemas import (
     ResultsRequest,
     SoapRequest,
     StartRequest,
+    TriageAssessRequest,
     VisitResult,
 )
 from soap.note import build_soap_note
+from triage.rules import RuleSetError, get_rules
+from triage.schema import RANK
+from triage.service import TriageInputError
+from triage.service import triage as run_triage
 
 # Set SERVICE_API_KEY in .env and send it as X-Service-Key. This service answers clinical
 # questions about named patients and must not be reachable from anywhere but the backend;
@@ -139,6 +144,26 @@ async def _code_list_error(_request, exc: icd10.CodeListError):
     )
 
 
+@app.exception_handler(RuleSetError)
+async def _rule_set_error(_request, exc: RuleSetError):
+    """503, not 500: the service is up but cannot triage safely.
+
+    There is deliberately no fallback. Every other degraded path in this system still
+    produces a usable answer, but a rule set that will not load has no safe default -
+    sorting patients on thresholds nobody reviewed is the one failure worth refusing.
+    """
+    return JSONResponse(
+        status_code=503, content={"error": "triage_rules_unavailable", "detail": str(exc)}
+    )
+
+
+@app.exception_handler(TriageInputError)
+async def _triage_input_error(_request, exc: TriageInputError):
+    return JSONResponse(
+        status_code=422, content={"error": "triage_input_invalid", "detail": str(exc)}
+    )
+
+
 # --------------------------------------------------------------------------------
 # Building a session out of a request
 # --------------------------------------------------------------------------------
@@ -187,9 +212,9 @@ def _transition(chart: Chart, action: Callable[[ConsultationSession], None]) -> 
 
 @app.get("/health", tags=["service"])
 def health() -> dict:
-    """Liveness, plus the two facts that most often explain a surprising answer."""
+    """Liveness, plus the facts that most often explain a surprising answer."""
     code_list = icd10.load_code_list()
-    return {
+    body = {
         "status": "ok",
         "model": config.OPENROUTER_MODEL,
         "vlm_model": config.VLM_MODEL,
@@ -198,6 +223,23 @@ def health() -> dict:
         "icd10_codes": len(code_list.codes) if code_list else 0,
         "api_key_configured": bool(config.OPENROUTER_API_KEY),
     }
+
+    # The triage rule set is reported here rather than only at /reference/triage-rules,
+    # because "the queue stopped scoring people" is something an operator needs to see on
+    # the health check, not discover from a screen full of unscored patients.
+    try:
+        rules = get_rules()
+        body["triage"] = {
+            "status": "ok",
+            "ruleset_version": rules.ruleset_version,
+            "thresholds_verified": rules.is_verified(),
+            "red_flags": len(rules.red_flags.flags),
+        }
+    except RuleSetError as exc:
+        body["status"] = "degraded"
+        body["triage"] = {"status": "unavailable", "detail": str(exc)}
+
+    return body
 
 
 # --------------------------------------------------------------------------------
@@ -214,6 +256,63 @@ def reference_icd10() -> dict:
     return {
         "mode": "validated",
         "codes": [entry.model_dump() for entry in code_list.codes],
+    }
+
+
+@app.post("/triage/assess", tags=["triage"], dependencies=[Depends(require_key)])
+def triage_assess(payload: TriageAssessRequest) -> dict:
+    """Triage one patient. Stateless, like everything else here.
+
+    Always returns a decision. The model is an enrichment that may be unavailable, and
+    when it is, `interpretation.available` is false and the priority still stands on the
+    deterministic layers - so the caller never has to handle "triage failed", only
+    "triage ran without the model". The one thing that fails loudly is a broken rule
+    set, because sorting patients on thresholds nobody reviewed is worse than not
+    sorting them.
+
+    `priority_rank` in the response is the sort key. Order by it descending, then by
+    arrival time ascending, and the queue is correct without PHP knowing what CRITICAL
+    means.
+    """
+    result = run_triage(
+        payload.request, profile=payload.profile, rules_only=payload.rules_only
+    )
+    return result.model_dump(mode="json")
+
+
+@app.get("/reference/triage-rules", tags=["reference"], dependencies=[Depends(require_key)])
+def reference_triage_rules() -> dict:
+    """The triage rule set, so the UI can explain a priority without a second copy of it.
+
+    Served for the same reason the workflow is: a red-flag list or a priority ladder
+    retyped into React is one that will disagree with the engine, and the disagreement
+    surfaces as a screen telling a nurse something the system did not decide.
+    """
+    rules = get_rules()
+    return {
+        "ruleset_version": rules.ruleset_version,
+        "verified": rules.is_verified(),
+        "verification_status": rules.verification_status,
+        "source": rules.news2.source.citation(),
+        "population": {
+            "min_age_years": rules.population.min_age_years,
+            "excludes_pregnancy": rules.population.excludes_pregnancy,
+        },
+        # The ladder, so the front end sorts and colours from the engine's own ordering.
+        "priorities": [
+            {"priority": p.value, "rank": r}
+            for p, r in sorted(RANK.items(), key=lambda kv: -kv[1])
+        ],
+        "actions": {
+            band.priority.value: band.recommended_action for band in rules.escalation.bands
+        },
+        "retriage_interval_minutes": {
+            p.value: m for p, m in rules.waiting_room.retriage_interval_minutes.items()
+        },
+        "red_flags": [
+            {"id": f.id, "label": f.label, "floor": f.floor.value, "source": f.source}
+            for f in rules.red_flags.flags
+        ],
     }
 
 

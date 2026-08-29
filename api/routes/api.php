@@ -42,6 +42,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // The transition table, served by the engine so the UI never keeps its own copy.
     Route::get('/workflow', fn () => response()->json(EngineClient::fromConfig()->workflow()));
 
+    // The triage ladder, the recommended actions and the red-flag list. Served for the
+    // same reason: a priority explained by the UI's own copy of the rules is a priority
+    // explained wrongly the first time the rule file changes.
+    Route::get('/triage/rules', fn () => response()->json(EngineClient::fromConfig()->triageRules()))
+        ->middleware('role:nurse,doctor,admin');
+
     // Reading the record. Patients are scoped to their own chart inside the controller.
     Route::middleware('role:doctor,nurse,admin,patient')->group(function () {
         Route::get('/patients', [PatientController::class, 'index']);
@@ -84,9 +90,32 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::middleware('role:nurse,admin')->group(function () {
             Route::post('/', [WaitingRoomController::class, 'store']);
+            // Recording vitals also triages. One action for the nurse, because a screen
+            // with a separate "now score them" button is a screen where half the queue
+            // ends up unscored.
             Route::post('/{entry}/vitals', [WaitingRoomController::class, 'vitals']);
             Route::post('/{entry}/visit', [WaitingRoomController::class, 'setVisit']);
+
+            // Re-score without re-entering observations: for when the engine was down at
+            // the time, or the readings have gone stale. It cannot detect deterioration —
+            // only new measurements can change a priority.
+            Route::post('/{entry}/retriage', [WaitingRoomController::class, 'retriage']);
+
             Route::delete('/{entry}', [WaitingRoomController::class, 'destroy']);
+        });
+
+        /*
+         * Overriding the agent.
+         *
+         * Open to doctors as well as nurses, unlike the rest of queue management. A doctor
+         * who looks at a waiting patient and disagrees with the machine must be able to
+         * say so immediately — that is the clinician-in-the-loop the whole design rests
+         * on, and routing it through "ask a nurse to change it" would make the override
+         * theoretical.
+         */
+        Route::middleware('role:nurse,doctor,admin')->group(function () {
+            Route::post('/{entry}/priority', [WaitingRoomController::class, 'priority']);
+            Route::delete('/{entry}/priority', [WaitingRoomController::class, 'clearPriority']);
         });
 
         // The doctor marks someone as seen when they start the consultation.
