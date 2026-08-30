@@ -21,7 +21,8 @@ export default function Layout() {
   const links = [
     { to: '/waiting-room', label: 'Waiting room', roles: ['nurse', 'doctor', 'admin'] },
     { to: '/patients', label: 'Patients', roles: ['nurse', 'doctor', 'admin', 'patient'] },
-    { to: '/in-progress', label: 'In progress', roles: ['doctor'] },
+    { to: '/in-progress', label: 'In progress', roles: ['doctor', 'admin'] },
+    { to: '/staff', label: 'Staff', roles: ['admin'] },
   ].filter((l) => l.roles.includes(user.role))
 
   return (

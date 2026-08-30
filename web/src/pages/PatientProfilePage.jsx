@@ -137,6 +137,11 @@ export default function PatientProfilePage() {
                   </span>
                 </div>
                 <div>{v.chief_complaint || <em className="muted">No complaint recorded.</em>}</div>
+                <div className="small muted">
+                  {v.doctor
+                    ? <>Seen by <strong>{v.doctor}</strong></>
+                    : <em>No doctor recorded</em>}
+                </div>
                 {v.working_diagnosis_label && (
                   <div className="small">
                     <strong>{v.working_diagnosis_label}</strong>{' '}

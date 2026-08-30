@@ -6,6 +6,7 @@ use App\Http\Controllers\Icd10Controller;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientIntakeController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\StaffController;
 use App\Http\Controllers\WaitingRoomController;
 use App\Engine\EngineClient;
 use Illuminate\Support\Facades\Route;
@@ -96,6 +97,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/{entry}/vitals', [WaitingRoomController::class, 'vitals']);
             Route::post('/{entry}/visit', [WaitingRoomController::class, 'setVisit']);
 
+            // Which doctor the patient is waiting for. Changeable while they wait; the
+            // change lands on both doctors' screens at once.
+            Route::post('/{entry}/doctor', [WaitingRoomController::class, 'assignDoctor']);
+
             // Re-score without re-entering observations: for when the engine was down at
             // the time, or the readings have gone stale. It cannot detect deterioration —
             // only new measurements can change a priority.
@@ -122,6 +127,26 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{entry}/seen', [WaitingRoomController::class, 'seen'])
             ->middleware('role:nurse,doctor,admin');
     });
+
+    /*
+     * Staff accounts. The administrator's alone.
+     *
+     * Clinicians do not sign themselves up: an account that can prescribe, or that can enter
+     * the allergy list a prescription is screened against, is granted deliberately — and an
+     * audit trail is only worth reading when every account belongs to a known person.
+     */
+    Route::middleware('role:admin')->prefix('staff')->group(function () {
+        Route::get('/', [StaffController::class, 'index']);
+        Route::post('/', [StaffController::class, 'store']);
+        Route::patch('/{user}', [StaffController::class, 'update']);
+        Route::post('/{user}/password', [StaffController::class, 'resetPassword']);
+        // Deactivate, never delete: their name is on visits, notes and audit rows.
+        Route::delete('/{user}', [StaffController::class, 'deactivate']);
+    });
+
+    // Doctors available to take patients, for the nurse's assignment control.
+    Route::get('/doctors', [StaffController::class, 'doctors'])
+        ->middleware('role:nurse,doctor,admin');
 
     // Open visits for one patient, so the nurse can say which one they are back about.
     Route::get('/patients/{patient}/resumable-visits', [WaitingRoomController::class, 'resumableVisits'])

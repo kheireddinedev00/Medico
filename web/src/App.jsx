@@ -17,6 +17,7 @@ import PatientsPage from './pages/PatientsPage'
 import PatientProfilePage from './pages/PatientProfilePage'
 import InProgressPage from './pages/InProgressPage'
 import ConsultationPage from './pages/ConsultationPage'
+import StaffPage from './pages/StaffPage'
 
 export default function App() {
   return (
@@ -45,6 +46,15 @@ function Router() {
         <Route path="/patients" element={<PatientsPage />} />
         <Route path="/patients/:patientId" element={<PatientProfilePage />} />
         <Route path="/in-progress" element={<InProgressPage />} />
+        {/*
+          Typed URLs reach a route the nav bar does not show. The API refuses regardless —
+          this only decides whether a nurse who guesses the address gets a 403 rendered as
+          a page, or is simply sent back where they belong.
+        */}
+        <Route
+          path="/staff"
+          element={user.role === 'admin' ? <StaffPage /> : <Navigate to={home} replace />}
+        />
         <Route path="*" element={<Navigate to={home} replace />} />
       </Route>
 

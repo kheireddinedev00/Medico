@@ -109,8 +109,25 @@ class ConsultationController extends Controller
     /** Every visit still open, for the doctor's "in progress" list. */
     public function open(Request $request): JsonResponse
     {
-        $visits = Visit::with('patient:id,full_name')
+        /*
+         * A doctor's own open visits.
+         *
+         * Scoped for the same reason the queue is: in a clinic with several doctors, an
+         * "In progress" list showing everybody's half-finished consultations is a list
+         * nobody can use. Administrators see all of them, because somebody has to be able
+         * to find a visit left open by a doctor who is off shift.
+         *
+         * A visit with no doctor recorded is shown to everyone — it is unclaimed work, and
+         * hiding it would strand it.
+         */
+        $user = $request->user();
+
+        $visits = Visit::with(['patient:id,full_name', 'doctor:id,name'])
             ->where('status', '!=', 'COMPLETED')
+            ->when(
+                $user->role === 'doctor',
+                fn ($q) => $q->where(fn ($w) => $w->where('doctor_id', $user->id)->orWhereNull('doctor_id')),
+            )
             ->orderByDesc('updated_at')
             ->get();
 
@@ -121,6 +138,8 @@ class ConsultationController extends Controller
                 'status' => $v->status,
                 'chief_complaint' => $v->chief_complaint,
                 'working_diagnosis' => $v->working_diagnosis_label,
+                'doctor' => $v->doctor?->name,
+                'unclaimed' => $v->doctor_id === null,
                 'updated_at' => $v->updated_at,
                 'awaiting_results' => $v->status === 'WAITING_FOR_TESTS',
             ]),

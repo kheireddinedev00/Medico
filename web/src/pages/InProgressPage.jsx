@@ -56,6 +56,11 @@ function VisitRow({ visit, navigate }) {
           {visit.working_diagnosis && (
             <div className="small"><strong>{visit.working_diagnosis}</strong></div>
           )}
+          <div className="small muted">
+            {visit.unclaimed
+              ? <em>No doctor recorded — unclaimed</em>
+              : <>Seen by {visit.doctor}</>}
+          </div>
         </div>
         <div className="stack">
           <span className={visit.awaiting_results ? 'pill warn' : 'pill info'}>

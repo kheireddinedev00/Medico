@@ -65,6 +65,7 @@ export default function WaitingRoomPage() {
   const [order, setOrder] = useState(() => localStorage.getItem(ORDER_KEY) ?? 'priority')
   const [error, setError] = useState(null)
   const [modal, setModal] = useState(null)
+  const [doctors, setDoctors] = useState([])
 
   const isNurse = user.role === 'nurse' || user.role === 'admin'
 
@@ -77,6 +78,10 @@ export default function WaitingRoomPage() {
   }, [order])
 
   useEffect(() => { refresh() }, [refresh])
+
+  useEffect(() => {
+    api.doctors().then((d) => setDoctors(d.doctors)).catch(() => setDoctors([]))
+  }, [])
 
   const changeOrder = (next) => {
     localStorage.setItem(ORDER_KEY, next)
@@ -138,7 +143,9 @@ export default function WaitingRoomPage() {
       {entries.length === 0 && (
         <div className="card">
           <p className="empty">
-            Nobody is waiting.{!isNurse && ' The nurse adds patients to the queue.'}
+            {isNurse
+              ? 'Nobody is waiting.'
+              : 'No patients assigned to you. The nurses assign patients from the shared queue.'}
           </p>
         </div>
       )}
@@ -172,6 +179,12 @@ export default function WaitingRoomPage() {
               </span>
             </div>
           </div>
+
+          {/* Who this patient is waiting for. The nurse's call, changeable while they wait. */}
+          <AssignedDoctor
+            entry={e} doctors={doctors} isNurse={isNurse}
+            onChanged={refresh} onError={setError}
+          />
 
           {/* What they are here about. A new problem, or a visit they are coming back to. */}
           <VisitChoice entry={e} isNurse={isNurse} onChanged={refresh} onError={setError} />
@@ -244,10 +257,14 @@ export default function WaitingRoomPage() {
       {modal?.kind === 'search' && (
         <Modal title="Add a patient to the queue" onClose={() => setModal(null)}>
           <PatientSearch
+            doctors={doctors}
             onCancel={() => setModal(null)}
-            onPicked={async (patient, visitId) => {
+            onPicked={async (patient, visitId, doctorId) => {
               setModal(null)
-              try { await api.arrive(patient.id, visitId); refresh() } catch (e) { setError(e) }
+              try {
+                await api.arrive(patient.id, visitId, doctorId)
+                refresh()
+              } catch (e) { setError(e) }
             }}
           />
         </Modal>
@@ -281,18 +298,71 @@ export default function WaitingRoomPage() {
 }
 
 /**
+ * Which doctor the patient is waiting for.
+ *
+ * Shown on every row, including when it is nobody. "Unassigned" is a real state rather than
+ * a blank: the nurses can see it and fix it, and no doctor is handed a patient nobody gave
+ * them.
+ *
+ * A patient already with a doctor cannot be reassigned — moving them mid-consultation would
+ * leave the visit attached to one clinician and the queue pointing at another.
+ */
+function AssignedDoctor({ entry, doctors, isNurse, onChanged, onError }) {
+  const [editing, setEditing] = useState(false)
+
+  const choose = async (value) => {
+    try {
+      await api.assignDoctor(entry.id, value === '' ? null : Number(value))
+      setEditing(false)
+      onChanged()
+    } catch (e) { onError(e) }
+  }
+
+  const locked = entry.status === 'in_consultation'
+
+  if (editing) {
+    return (
+      <div className="row" style={{ margin: '8px 0' }}>
+        <select defaultValue={entry.doctor?.id ?? ''} onChange={(ev) => choose(ev.target.value)}>
+          <option value="">Unassigned</option>
+          {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+        <button onClick={() => setEditing(false)}>Cancel</button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="row" style={{ margin: '8px 0' }}>
+      {entry.doctor
+        ? <span className="pill info">Doctor: {entry.doctor.name}</span>
+        : <span className="pill warn">No doctor assigned</span>}
+      {isNurse && !locked && (
+        <button className="link" onClick={() => setEditing(true)}>
+          {entry.doctor ? 'reassign' : 'assign'}
+        </button>
+      )}
+      {isNurse && locked && (
+        <span className="muted small">in consultation — cannot reassign</span>
+      )}
+    </div>
+  )
+}
+
+/**
  * Search by name, then say what they are here about.
  *
  * Asking rather than guessing: a patient back for their results belongs on the visit that
  * ordered them. Opening a second consultation for the same episode leaves a chart with two
  * half-finished visits and no way to tell which one matters.
  */
-function PatientSearch({ onPicked, onCancel }) {
+function PatientSearch({ onPicked, onCancel, doctors }) {
   const [term, setTerm] = useState('')
   const [results, setResults] = useState([])
   const [picked, setPicked] = useState(null)
   const [visits, setVisits] = useState([])
   const [choice, setChoice] = useState('')
+  const [doctorId, setDoctorId] = useState('')
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -331,8 +401,24 @@ function PatientSearch({ onPicked, onCancel }) {
           <p className="muted small">No open visits — this will be a new one.</p>
         )}
 
+        {/*
+          Assigning here rather than in a second step. Left unassigned the patient sits in
+          nobody's queue: the nurses can see them, and no doctor has been told about them.
+          That is a legitimate answer while the nurse decides, so it stays available — but
+          it is not the default anyone should reach by not noticing the field.
+        */}
+        <label>Which doctor?
+          <select value={doctorId} onChange={(e) => setDoctorId(e.target.value)}>
+            <option value="">Decide later — nobody sees them yet</option>
+            {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+        </label>
+
         <div className="form-actions">
-          <button className="primary" onClick={() => onPicked(picked, choice || null)}>
+          <button
+            className="primary"
+            onClick={() => onPicked(picked, choice || null, doctorId ? Number(doctorId) : null)}
+          >
             Add to queue
           </button>
           <button onClick={onCancel}>Cancel</button>

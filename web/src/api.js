@@ -102,7 +102,8 @@ export const api = {
   queue: (status = 'active', order = 'priority') =>
     get(`/waiting-room?status=${status}&order=${order}`),
   // visitId null means a new problem; set means they are back about that open visit.
-  arrive: (patientId, visitId = null) => post('/waiting-room', { patient_id: patientId, visit_id: visitId }),
+  arrive: (patientId, visitId = null, doctorId = null) =>
+    post('/waiting-room', { patient_id: patientId, visit_id: visitId, doctor_id: doctorId }),
   setQueueVisit: (entryId, visitId) => post(`/waiting-room/${entryId}/visit`, { visit_id: visitId }),
   resumableVisits: (patientId) => get(`/patients/${patientId}/resumable-visits`),
   // Saving vitals also triages. One call, because a nurse who has to press a second
@@ -110,6 +111,21 @@ export const api = {
   recordVitals: (entryId, vitals) => post(`/waiting-room/${entryId}/vitals`, vitals),
   markSeen: (entryId, visitId) => post(`/waiting-room/${entryId}/seen`, { visit_id: visitId }),
   removeFromQueue: (entryId) => del(`/waiting-room/${entryId}`),
+
+  // Which doctor a waiting patient is for. Null unassigns, which is a real state:
+  // the patient stays in the shared queue where the nurses can resolve it.
+  assignDoctor: (entryId, doctorId) =>
+    post(`/waiting-room/${entryId}/doctor`, { doctor_id: doctorId }),
+  // Active doctors, for the assignment control.
+  doctors: () => get('/doctors'),
+
+  // --- staff accounts (administrator only) ---
+  staff: () => get('/staff'),
+  createStaff: (body) => post('/staff', body),
+  updateStaff: (id, body) => request('PATCH', `/staff/${id}`, body),
+  resetStaffPassword: (id, password) => post(`/staff/${id}/password`, { password }),
+  // Deactivates. Their name stays on everything they recorded.
+  deactivateStaff: (id) => del(`/staff/${id}`),
 
   // --- triage ---
   // Re-score without re-entering observations: the engine was down at the time, or the

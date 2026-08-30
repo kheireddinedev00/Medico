@@ -46,10 +46,23 @@ class PatientController extends Controller
             'patient' => $patient,
             // Computed, never stored — a stored age is wrong the day after a birthday.
             'age' => $patient->date_of_birth?->age ?? $patient->age_years,
-            'visits' => $patient->visits()->orderByDesc('created_at')->get([
-                'id', 'status', 'chief_complaint', 'working_diagnosis_label',
-                'working_diagnosis_icd10', 'created_at',
-            ]),
+            // The doctor is part of the visit, not a footnote: "who saw me last time" is
+            // one of the first things anyone asks of a record.
+            'visits' => $patient->visits()->with('doctor:id,name')
+                ->orderByDesc('created_at')
+                ->get([
+                    'id', 'status', 'chief_complaint', 'working_diagnosis_label',
+                    'working_diagnosis_icd10', 'doctor_id', 'created_at',
+                ])
+                ->map(fn ($v) => [
+                    'id' => $v->id,
+                    'status' => $v->status,
+                    'chief_complaint' => $v->chief_complaint,
+                    'working_diagnosis_label' => $v->working_diagnosis_label,
+                    'working_diagnosis_icd10' => $v->working_diagnosis_icd10,
+                    'doctor' => $v->doctor?->name,
+                    'created_at' => $v->created_at,
+                ]),
         ]);
     }
 

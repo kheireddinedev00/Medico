@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Engine\EngineClient;
 use App\Engine\TriageRunner;
 use App\Models\Patient;
+use App\Models\User;
 use App\Models\Visit;
 use App\Models\WaitingRoomEntry;
 use App\Support\Auditor;
@@ -69,7 +70,26 @@ class WaitingRoomController extends Controller
         // reorder the room by arrival.
         $order = $request->string('order')->value() === 'arrival' ? 'arrival' : 'priority';
 
-        $entries = WaitingRoomEntry::with('patient:id,full_name,date_of_birth,age_years')
+        /*
+         * Whose queue this is.
+         *
+         * The list itself is shared — every nurse works the same one, and any of them can add
+         * to it. A doctor's *view* of it is not: they see the patients assigned to them, so
+         * that a clinic with four doctors does not have two of them opening the same person.
+         *
+         * Nurses and administrators see everything, including the unassigned, because they
+         * are the ones who can fix an unassigned patient. A doctor is deliberately not shown
+         * the unassigned: a patient nobody has been given to is a nurse's problem to resolve,
+         * not a queue for whoever looks first.
+         */
+        $user = $request->user();
+        $scopedToMe = $user->role === User::ROLE_DOCTOR;
+
+        $entries = WaitingRoomEntry::with([
+            'patient:id,full_name,date_of_birth,age_years',
+            'doctor:id,name',
+        ])
+            ->when($scopedToMe, fn ($q) => $q->where('doctor_id', $user->id))
             ->when($status !== 'all', function ($q) use ($status) {
                 // "active" is the default and means still in the clinic — waiting, or with
                 // the doctor. Someone being seen has not left the room, and dropping them
@@ -144,6 +164,14 @@ class WaitingRoomController extends Controller
 
             // Null means a new problem; set means the nurse marked them as back about an
             // existing visit, and the doctor should resume rather than open a second one.
+            // Who this patient is waiting for. Null means nobody yet — a real state,
+            // and one the nurses' view shows so it can be resolved.
+            'doctor' => $entry->doctor ? [
+                'id' => $entry->doctor->id,
+                'name' => $entry->doctor->name,
+            ] : null,
+            'assigned_at' => $entry->assigned_at,
+
             'visit_id' => $entry->visit_id,
             // What the doctor should be taken to — a saved visit, or the draft in flight.
             'active_visit_id' => $entry->visit_id ?? $entry->draft_visit_id,
@@ -250,7 +278,10 @@ class WaitingRoomController extends Controller
         $data = $request->validate([
             'patient_id' => ['required', 'string', 'exists:patients,id'],
             'visit_id' => ['nullable', 'string', 'exists:visits,id'],
+            'doctor_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
+
+        $this->refuseNonDoctor($data['doctor_id'] ?? null);
 
         // A patient already in the queue is not added twice — a duplicate row would make
         // the same person appear as two people waiting.
@@ -268,6 +299,9 @@ class WaitingRoomController extends Controller
         $entry = WaitingRoomEntry::create([
             'patient_id' => $data['patient_id'],
             'visit_id' => $data['visit_id'] ?? null,
+            'doctor_id' => $data['doctor_id'] ?? null,
+            'assigned_by' => isset($data['doctor_id']) ? $request->user()->id : null,
+            'assigned_at' => isset($data['doctor_id']) ? now() : null,
             'nurse_id' => $request->user()->id,
             'arrived_at' => now(),
             'status' => 'waiting',
@@ -276,6 +310,77 @@ class WaitingRoomController extends Controller
         Auditor::record($request->user()->id, 'waiting_room.arrived', $entry, null, $entry->toArray(), $request->ip());
 
         return response()->json(['entry' => $this->present($entry->fresh())], 201);
+    }
+
+    /**
+     * Assign, reassign, or unassign the doctor a patient is waiting for.
+     *
+     * The nurse's call, and changeable: a doctor going off shift, a case turning out to need
+     * someone else, a queue that has become lopsided. The change is immediate on both
+     * doctors' screens — the one who loses the patient stops seeing them, the one who gains
+     * them starts.
+     *
+     * Passing null unassigns, which is a legitimate state rather than an error: the patient
+     * stays in the shared queue where the nurses can see them, and no doctor is shown a
+     * patient nobody gave them.
+     *
+     * A patient already in consultation is not reassigned. Moving someone out from under a
+     * doctor mid-encounter would leave the visit attached to one clinician and the queue row
+     * pointing at another.
+     */
+    public function assignDoctor(Request $request, WaitingRoomEntry $entry): JsonResponse
+    {
+        $data = $request->validate([
+            'doctor_id' => ['nullable', 'integer', 'exists:users,id'],
+        ]);
+
+        abort_if(
+            $entry->status === 'in_consultation',
+            422,
+            'That patient is already with a doctor. Reassigning mid-consultation would leave '
+            .'the visit and the queue disagreeing about who is seeing them.',
+        );
+
+        $doctorId = $data['doctor_id'] ?? null;
+        $this->refuseNonDoctor($doctorId);
+
+        $before = ['doctor_id' => $entry->doctor_id];
+
+        $entry->update([
+            'doctor_id' => $doctorId,
+            'assigned_by' => $request->user()->id,
+            'assigned_at' => $doctorId === null ? null : now(),
+        ]);
+
+        Auditor::record(
+            $request->user()->id,
+            $doctorId === null ? 'waiting_room.unassigned' : 'waiting_room.assigned',
+            $entry,
+            $before,
+            ['doctor_id' => $doctorId],
+            $request->ip(),
+        );
+
+        return response()->json(['entry' => $this->present($entry->fresh())]);
+    }
+
+    /**
+     * A patient can only be assigned to a doctor who can actually see them.
+     *
+     * `exists:users,id` is not the same question. An administrator's id passes it, and the
+     * patient would then sit in a queue nobody is looking at while the row claims otherwise —
+     * worse than being visibly unassigned. Null is fine: that state is honest.
+     */
+    private function refuseNonDoctor(?int $doctorId): void
+    {
+        if ($doctorId === null) {
+            return;
+        }
+
+        $doctor = User::find($doctorId);
+
+        abort_if($doctor?->role !== User::ROLE_DOCTOR, 422, 'That account is not a doctor.');
+        abort_if(! $doctor->is_active, 422, 'That doctor’s account is deactivated.');
     }
 
     /** Change what this arrival is about — a new problem, or an open visit to resume. */

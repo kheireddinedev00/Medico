@@ -16,7 +16,8 @@ class WaitingRoomEntry extends Model
 {
     /** waiting | in_consultation | completed | left */
     protected $fillable = [
-        'patient_id', 'visit_id', 'draft_visit_id', 'nurse_id', 'arrived_at', 'seen_at', 'status',
+        'patient_id', 'visit_id', 'draft_visit_id', 'nurse_id',
+        'doctor_id', 'assigned_by', 'assigned_at', 'arrived_at', 'seen_at', 'status',
         // Triage vitals. Omitting these from the list does not raise an error — Eloquent
         // drops non-fillable attributes silently — so a missing name here reads as a
         // measurement the nurse never took.
@@ -33,6 +34,7 @@ class WaitingRoomEntry extends Model
         'arrived_at' => 'datetime',
         'seen_at' => 'datetime',
         'vitals_taken_at' => 'datetime',
+        'assigned_at' => 'datetime',
         'priority_computed_at' => 'datetime',
         'nurse_priority_at' => 'datetime',
         'temperature_c' => 'float',
@@ -75,5 +77,16 @@ class WaitingRoomEntry extends Model
     public function visit(): BelongsTo
     {
         return $this->belongsTo(Visit::class);
+    }
+
+    /** The doctor this patient is waiting for. Null until a nurse assigns one. */
+    public function doctor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'doctor_id');
+    }
+
+    public function nurse(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'nurse_id');
     }
 }

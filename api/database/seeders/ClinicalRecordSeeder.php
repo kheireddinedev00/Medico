@@ -82,7 +82,12 @@ class ClinicalRecordSeeder extends Seeder
     {
         $accounts = [
             ['name' => 'Dr. Amina Belkacem', 'email' => 'doctor@clinic.test', 'role' => User::ROLE_DOCTOR],
+            // A second doctor, so assignment is something you can actually see working —
+            // with one doctor, "only my patients" and "all patients" look identical.
+            ['name' => 'Dr. Yacine Meddour', 'email' => 'doctor2@clinic.test', 'role' => User::ROLE_DOCTOR],
             ['name' => 'Nurse Sofiane Haddad', 'email' => 'nurse@clinic.test', 'role' => User::ROLE_NURSE],
+            // Two nurses, because the queue is shared and that is worth demonstrating.
+            ['name' => 'Nurse Yasmine Kaci', 'email' => 'nurse2@clinic.test', 'role' => User::ROLE_NURSE],
             ['name' => 'Clinic Administrator', 'email' => 'admin@clinic.test', 'role' => User::ROLE_ADMIN],
         ];
 
