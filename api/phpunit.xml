@@ -23,9 +23,17 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!-- The same engine the application runs on. In-memory SQLite is faster, but a
+             suite that passes against a database nobody deploys is testing the wrong
+             thing: SQLite is typeless and accepts values MySQL rejects, and its `=` is
+             case-sensitive where MySQL's collation is not. Its own database, so a test
+             run never touches the clinic's data. -->
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_DATABASE" value="respiratory_cdss_test"/>
         <env name="DB_URL" value=""/>
+        <!-- Host and credentials deliberately absent: they fall through to `.env`, which
+             is not in the repository. Only the database name is overridden, which is the
+             part that matters — it is what keeps a test run off the clinic's data. -->
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

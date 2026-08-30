@@ -51,6 +51,36 @@ venv/Scripts/python -m soap.cli V-002
 
 Writes the SOAP note for a visit. See [SOAP notes](#soap-notes) below.
 
+### The web application
+
+The Laravel API and the React front end need a MySQL database. The engine does not — it
+stores nothing, and the `storage/` layer above is a separate SQLite record used by the
+CLI.
+
+Start MySQL (XAMPP's control panel, or `C:\xampp\mysql\bin\mysqld.exe`), then create the
+database once:
+
+```sql
+CREATE DATABASE respiratory_cdss CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE respiratory_cdss_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'cdss'@'127.0.0.1' IDENTIFIED BY 'your-password';
+GRANT ALL PRIVILEGES ON respiratory_cdss.* TO 'cdss'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON respiratory_cdss_test.* TO 'cdss'@'127.0.0.1';
+```
+
+The second database is for the test suite, so a test run never touches the clinic's data.
+Copy `api/.env.example` to `api/.env`, set `DB_PASSWORD`, then:
+
+```bash
+cd api && php artisan migrate --seed && php artisan serve
+```
+
+```bash
+cd web && npm install && npm run dev
+```
+
+Three processes in all: the engine on 8001, the API on 8000, the front end on 5173.
+
 ### Everything else
 
 | Command | What it does |
