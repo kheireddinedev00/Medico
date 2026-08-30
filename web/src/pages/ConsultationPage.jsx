@@ -190,6 +190,9 @@ export default function ConsultationPage() {
      * alternative was a frozen workflow with nothing on screen to explain it.
      */
     can: (state) => next === null || next.includes(state),
+    // Completing a visit ends the encounter, so the consultation screen has nothing left
+    // to show. The doctor's next patient is in the queue, so that is where they land.
+    onCompleted: () => navigate('/waiting-room'),
   }
 
   const Section = {
@@ -264,7 +267,13 @@ export default function ConsultationPage() {
         )}
 
         <div className="exits">
-          <button className="back" onClick={() => navigate(-1)}>← Back</button>
+          {/*
+            The queue, not browser history. `navigate(-1)` returned wherever the doctor
+            happened to come from — a chart, a search, the patients list — which is rarely
+            where they are going next. Stepping out of a consultation means going back to
+            the room, and the patient is still in it.
+          */}
+          <button className="back" onClick={() => navigate('/waiting-room')}>← Back</button>
           <p className="muted small">Keeps the patient in the waiting room.</p>
 
           <button disabled={busy} onClick={() => setReleasing(true)}>Release patient</button>
@@ -348,7 +357,7 @@ export default function ConsultationPage() {
           <div className="form-actions">
             <button className="primary" onClick={async () => {
               await api.leaveConsultation(visit.id).catch(() => {})
-              navigate(persisted ? '/in-progress' : '/patients')
+              navigate(persisted ? '/in-progress' : '/waiting-room')
             }}>Release</button>
             <button onClick={() => setReleasing(false)}>Stay in the consultation</button>
           </div>

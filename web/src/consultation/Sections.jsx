@@ -1299,7 +1299,7 @@ export function Soap({ visit, persisted, goTo }) {
   )
 }
 
-export function CloseVisit({ visit, run, busy, can }) {
+export function CloseVisit({ visit, run, busy, can, onCompleted }) {
   const [plan, setPlan] = useState('')
   const [note, setNote] = useState('')
 
@@ -1339,7 +1339,12 @@ export function CloseVisit({ visit, run, busy, can }) {
       {can('COMPLETED') && (
         <div className="card">
           <button className="primary" disabled={busy}
-            onClick={() => run('complete', () => api.complete(visit.id))}>
+            onClick={async () => {
+              // Only on success. A refusal has to stay on screen where it can be read,
+              // and navigating away would take the explanation with it.
+              const result = await run('complete', () => api.complete(visit.id))
+              if (result) onCompleted?.()
+            }}>
             Complete visit
           </button>
           {/* Terminal, and worth saying before the click rather than after. */}
