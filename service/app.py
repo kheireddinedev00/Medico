@@ -50,6 +50,7 @@ from clinical.differential import AssessmentError
 from clinical.json_reply import ReplyError
 from clinical.session import ConsultationError, ConsultationSession
 from patient.report import StoredReport
+from patient.visit import Visit
 from report_reader.analyzer import analyse
 from report_reader.extractor import ExtractionError, extract_report
 from report_reader.loader import UnsupportedFileError
@@ -357,6 +358,36 @@ def start(request: StartRequest) -> VisitResult:
     return VisitResult(visit=session.visit, persist=session.is_persisted)
 
 
+@app.post("/consultation/reset", tags=["consultation"], dependencies=[Depends(require_key)])
+def reset(request: ChartRequest) -> VisitResult:
+    """Empty a consultation and start it again from the beginning.
+
+    Not a transition, and deliberately not expressed as one. The state machine describes how
+    an encounter *progresses*; there is no edge back to the start because clinically there is
+    no such move — a visit does not un-happen. This is an erase: the same visit id, emptied,
+    as though it had just been opened.
+
+    It exists because a consultation started on the wrong patient, or built on findings that
+    turned out to belong to someone else, is better wiped than carried forward. The caller
+    gets `persist: false` back, which is the same answer a freshly opened visit gives — so
+    nothing is written until a diagnosis is chosen again, and a reset the doctor walks away
+    from leaves nothing behind.
+
+    What it does not do is hide the erase. The record above this service keeps the audit
+    entry; what returns here is simply an empty visit.
+    """
+    visit = request.chart.visit
+
+    return VisitResult(
+        visit=Visit(
+            id=visit.id,
+            patient_id=visit.patient_id,
+            created_at=visit.created_at,
+        ),
+        persist=False,
+    )
+
+
 @app.post("/consultation/findings", tags=["consultation"], dependencies=[Depends(require_key)])
 def findings(request: FindingsRequest) -> VisitResult:
     """Record what the doctor observed."""
@@ -460,6 +491,18 @@ def record_results_from_reports(request: ResultsFromReportsRequest) -> VisitResu
     return _transition(
         chart, lambda s: s.record_results_from_reports(selected, resulted=request.resulted)
     )
+
+
+@app.post(
+    "/consultation/amend-results", tags=["consultation"], dependencies=[Depends(require_key)]
+)
+def amend_results(request: ResultsRequest) -> VisitResult:
+    """Correct what the recorded results say. Not a transition — the visit does not move.
+
+    Recording appends, so results arriving separately accumulate. This replaces, for fixing
+    a typo or tidying several runs of machine output into something a colleague can read.
+    """
+    return _transition(request.chart, lambda s: s.amend_results(request.summary))
 
 
 @app.post(

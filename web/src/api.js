@@ -134,7 +134,13 @@ export const api = {
   // The patient can leave the room. The visit stays open and resumable.
   leaveConsultation: (visitId) => post(`/consultations/${visitId}/leave`),
   nextStates: (visitId) => get(`/consultations/${visitId}/next-states`),
+  // The generated draft, rebuilt from the record every time it is asked for.
   soap: (visitId) => get(`/consultations/${visitId}/soap`),
+  // The version a physician reviewed and signed. Null until they save one.
+  savedSoap: (visitId) => get(`/consultations/${visitId}/soap/saved`),
+  saveSoap: (visitId, body) => post(`/consultations/${visitId}/soap/save`, body),
+  // Empties the consultation. An erase, not a transition — see the engine's /reset.
+  resetConsultation: (visitId) => post(`/consultations/${visitId}/reset`),
   findings: (visitId, findings) => post(`/consultations/${visitId}/findings`, findings),
 
   // The assistant. Suggestions only — none of these writes a decision.
@@ -157,6 +163,9 @@ export const api = {
   orderMore: (visitId) => post(`/consultations/${visitId}/investigations/more`),
   recordResults: (visitId, summary, resulted) =>
     post(`/consultations/${visitId}/results`, { summary, resulted }),
+  // Replaces the recorded results text. Recording appends; this corrects.
+  amendResults: (visitId, summary) =>
+    post(`/consultations/${visitId}/results/amend`, { summary }),
   resultsFromReports: (visitId, reportIds) =>
     post(`/consultations/${visitId}/results/from-reports`, { report_ids: reportIds }),
   treat: (visitId) => post(`/consultations/${visitId}/treat`),

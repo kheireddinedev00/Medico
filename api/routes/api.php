@@ -158,6 +158,12 @@ Route::middleware('auth:sanctum')->group(function () {
                 ->middleware('role:doctor,admin');
             Route::get('/next-states', [ConsultationController::class, 'nextStates']);
             Route::get('/soap', [ConsultationController::class, 'soap']);
+            // The note a physician reviewed and signed, distinct from the generated draft.
+            Route::get('/soap/saved', [ConsultationController::class, 'savedSoap']);
+            Route::post('/soap/save', [ConsultationController::class, 'saveSoap']);
+
+            // Empties the consultation and starts it again. An erase, not a transition.
+            Route::post('/reset', [ConsultationController::class, 'reset']);
 
             // Releases the patient from the waiting room. Navigating away does not.
             Route::post('/leave', [ConsultationController::class, 'leave']);
@@ -184,6 +190,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
             Route::post('/results', [ConsultationController::class, 'recordResults']);
             Route::post('/results/from-reports', [ConsultationController::class, 'recordResultsFromReports']);
+            // Correcting what the results say. Not a transition; the visit does not move.
+            Route::post('/results/amend', [ConsultationController::class, 'amendResults']);
 
             Route::post('/treat', [ConsultationController::class, 'treat']);
             Route::post('/prescribe', [ConsultationController::class, 'prescribe']);

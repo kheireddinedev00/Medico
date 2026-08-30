@@ -276,13 +276,21 @@ class ConsultationSession:
         self._persisted = True
         self._persist()
 
+    # Coding is allowed wherever the diagnosis itself can be set or changed. Restricting it
+    # to ICD10_SELECTION alone left a real hole: `revise_diagnosis` works at RESULTS_REVIEW,
+    # so a physician could change the diagnosis after seeing results and then be unable to
+    # change its code — leaving the previous diagnosis's code attached to the new one, which
+    # is worse than having no code at all.
+    _CODEABLE_AT = frozenset({VisitStatus.ICD10_SELECTION, VisitStatus.RESULTS_REVIEW})
+
     def set_icd10_code(self, code: str) -> None:
         """Attach a code the physician picked. Never called by the assistant itself."""
         if self.visit.working_diagnosis is None:
             raise ConsultationError("There is no working diagnosis to code.")
-        if self.visit.status is not VisitStatus.ICD10_SELECTION:
+        if self.visit.status not in self._CODEABLE_AT:
+            allowed = ", ".join(sorted(s.value for s in self._CODEABLE_AT))
             raise ConsultationError(
-                f"Coding happens at ICD10_SELECTION, not at {self.visit.status.value}."
+                f"Coding happens at {allowed}, not at {self.visit.status.value}."
             )
         self.visit.working_diagnosis.icd10_code = code.strip().upper() or None
         self._persist()
@@ -343,6 +351,38 @@ class ConsultationSession:
         for investigation in self.visit.ordered_investigations:
             if resulted is None or investigation.name in resulted:
                 investigation.status = "resulted"
+        self._persist()
+
+    def amend_results(self, summary: str) -> None:
+        """Replace the recorded results with a corrected version.
+
+        Recording appends, which is right while results are arriving — losing the chest film
+        because the culture came back later would corrupt the note. But appending alone
+        leaves no way to fix a typo, tidy three runs of machine output into something
+        readable, or remove a line that turned out to belong to another patient's sample.
+
+        So this replaces rather than adds, and it is deliberately not a transition: the visit
+        stays exactly where it is. Amending what results *say* is a different act from
+        deciding what they *mean*, and only the second moves the encounter forward.
+
+        Allowed only at RESULTS_REVIEW, because that is the only state where there is
+        anything to amend.
+        """
+        if self.visit.status is not VisitStatus.RESULTS_REVIEW:
+            raise ConsultationError(
+                f"Results can only be amended at RESULTS_REVIEW, "
+                f"not at {self.visit.status.value}."
+            )
+
+        cleaned = (summary or "").strip()
+        if not cleaned:
+            raise ConsultationError(
+                "Amended results cannot be empty. To remove a result entirely, reset the "
+                "visit — silently emptying the field would leave the record claiming tests "
+                "were reviewed with nothing to show for it."
+            )
+
+        self.visit.results_summary = cleaned
         self._persist()
 
     def revise_diagnosis(

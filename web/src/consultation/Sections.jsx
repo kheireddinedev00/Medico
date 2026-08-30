@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api'
+import { useDraft } from '../useDraft'
 import SoapNote from '../components/SoapNote'
 
 /**
@@ -29,12 +30,14 @@ const AiHeading = ({ children, action }) => (
 // --- findings -------------------------------------------------------------------
 
 export function Findings({ visit, run, busy, patientId }) {
-  const [f, setF] = useState({
+  // Kept in the draft store, so stepping away to check the chart and coming back does not
+  // discard what has been typed.
+  const [f, setF, clearF] = useDraft(`findings.${visit.id}`, {
     chief_complaint: visit.chief_complaint ?? '',
     symptoms: (visit.symptoms ?? []).join(', '),
     physical_exam: visit.physical_exam ?? '',
   })
-  const [vitals, setVitals] = useState(visit.vitals ?? {})
+  const [vitals, setVitals, clearVitals] = useDraft(`vitals.${visit.id}`, visit.vitals ?? {})
   const [triage, setTriage] = useState(null)
 
   /**
@@ -55,12 +58,19 @@ export function Findings({ visit, run, busy, patientId }) {
 
   const hasOwn = Object.values(vitals).some((v) => v != null && v !== '')
 
-  const save = () => run('findings', () => api.findings(visit.id, {
-    chief_complaint: f.chief_complaint,
-    symptoms: f.symptoms.split(',').map((s) => s.trim()).filter(Boolean),
-    physical_exam: f.physical_exam || null,
-    vitals,
-  }))
+  const save = () => run('findings', async () => {
+    const result = await api.findings(visit.id, {
+      chief_complaint: f.chief_complaint,
+      symptoms: f.symptoms.split(',').map((s) => s.trim()).filter(Boolean),
+      physical_exam: f.physical_exam || null,
+      vitals,
+    })
+    // Cleared only once it is safely in the visit. A draft that outlives what it drafted is
+    // how two versions of the same note start disagreeing.
+    clearF()
+    clearVitals()
+    return result
+  }, 'findings')
 
   return (
     <section>
@@ -136,8 +146,20 @@ export function Findings({ visit, run, busy, patientId }) {
 
 // --- the assistant ----------------------------------------------------------------
 
-export function Differential({ visit, run, busy }) {
-  const [assessment, setAssessment] = useState(null)
+export function Differential({ visit, run, busy, reassessing }) {
+  /*
+   * Held in the draft store rather than component state.
+   *
+   * Stepping over to re-read the findings and coming back used to discard the differential,
+   * so the only way to see it again was to ask the assistant again — a slow, rate-limited
+   * call for an answer that had already been given. The suggestion is not a decision and is
+   * not part of the record until one is made, so keeping it in the browser is right; it is
+   * cleared when the visit is reset, along with every other draft.
+   */
+  const [assessment, setAssessment] = useDraft(`assessment.${visit.id}`, null)
+
+  // Re-assessing after results: the diagnosis already exists, so picking one revises it.
+  const reconsidering = visit.status === 'RESULTS_REVIEW' && !!visit.working_diagnosis
 
   const ask = () => run('assess', async () => {
     const r = await api.assess(visit.id)
@@ -152,6 +174,14 @@ export function Differential({ visit, run, busy }) {
           {busy === 'assess' ? 'Thinking…' : assessment ? 'Re-assess' : 'Ask the assistant'}
         </button>
       }>Differential</AiHeading>
+
+      {reassessing && (
+        <div className="note warn">
+          <strong>Reassessing after results.</strong> The assistant is working from the
+          chart including everything recorded in this visit. Choosing a diagnosis here
+          revises the existing one rather than replacing the encounter.
+        </div>
+      )}
 
       <p className="muted small">
         Suggestions only. Choosing one is the physician's decision, and the point at which
@@ -169,9 +199,19 @@ export function Differential({ visit, run, busy }) {
             <span className="pill">{d.likelihood}</span>
           </div>
           <p className="small">{d.reasoning}</p>
+          {/*
+            Choosing after results is a *revision*, not a first choice, and the engine
+            treats them as different acts — selecting again would try to move the visit back
+            to ICD10_SELECTION, which the workflow refuses. Same button, right call.
+          */}
           <button className="primary" disabled={busy} onClick={() => run('dx', () =>
-            api.selectDiagnosis(visit.id, { label: d.label, reasoning: d.reasoning })
-          )}>Choose as working diagnosis</button>
+            reconsidering
+              ? api.reviseDiagnosis(visit.id, { label: d.label, reasoning: d.reasoning })
+              : api.selectDiagnosis(visit.id, { label: d.label, reasoning: d.reasoning }),
+            'diagnosis',
+          )}>
+            {reconsidering ? 'Revise to this diagnosis' : 'Choose as working diagnosis'}
+          </button>
         </div>
       ))}
 
@@ -200,8 +240,10 @@ export function Differential({ visit, run, busy }) {
 // --- decisions ----------------------------------------------------------------------
 
 export function Diagnosis({ visit, run, busy }) {
-  const [label, setLabel] = useState('')
-  const [reasoning, setReasoning] = useState('')
+  const [d, setD, clearD] = useDraft(`diagnosis.${visit.id}`, { label: '', reasoning: '' })
+  const { label, reasoning } = d
+  const setLabel = (v) => setD({ ...d, label: v })
+  const setReasoning = (v) => setD({ ...d, reasoning: v })
 
   const dx = visit.working_diagnosis
   // Revising is a different act from choosing, and the engine only permits it once results
@@ -232,11 +274,13 @@ export function Diagnosis({ visit, run, busy }) {
             <label>Reasoning
               <textarea rows={2} value={reasoning} onChange={(e) => setReasoning(e.target.value)} />
             </label>
-            <button className="primary" disabled={busy || !label} onClick={() => run('dx', () =>
-              revising
-                ? api.reviseDiagnosis(visit.id, { label, reasoning: reasoning || null })
-                : api.selectDiagnosis(visit.id, { label, reasoning: reasoning || null })
-            )}>{revising ? 'Revise diagnosis' : 'Record diagnosis'}</button>
+            <button className="primary" disabled={busy || !label} onClick={() => run('dx', async () => {
+              const result = revising
+                ? await api.reviseDiagnosis(visit.id, { label, reasoning: reasoning || null })
+                : await api.selectDiagnosis(visit.id, { label, reasoning: reasoning || null })
+              clearD()
+              return result
+            }, 'diagnosis')}>{revising ? 'Revise diagnosis' : 'Record diagnosis'}</button>
           </div>
         </div>
       )}
@@ -250,7 +294,7 @@ export function Diagnosis({ visit, run, busy }) {
   )
 }
 
-export function Icd10({ visit, run, busy }) {
+export function Icd10({ visit, run, busy, choosePath }) {
   const [codes, setCodes] = useState(null)
 
   return (
@@ -263,6 +307,22 @@ export function Icd10({ visit, run, busy }) {
 
       {!visit.working_diagnosis && (
         <div className="card"><p className="empty">Choose a working diagnosis first.</p></div>
+      )}
+
+      {visit.status === 'ICD10_SELECTION' && visit.working_diagnosis && (
+        <div className="card">
+          <div className="row space">
+            <span className="small">Ready to decide how this visit proceeds?</span>
+            <button className="primary" onClick={choosePath}>Choose path</button>
+          </div>
+        </div>
+      )}
+
+      {visit.status === 'RESULTS_REVIEW' && visit.working_diagnosis && (
+        <div className="note warn">
+          The diagnosis was revised after results. Re-code it if the code no longer matches —
+          an old code left on a new diagnosis is worse than none.
+        </div>
       )}
 
       {visit.working_diagnosis?.icd10_code && (
@@ -279,7 +339,7 @@ export function Icd10({ visit, run, busy }) {
           {codes.codes.map((c) => (
             <div key={c.code} className="row space listrow">
               <span><strong className="mono">{c.code}</strong> {c.description}</span>
-              <button onClick={() => run('code', () => api.setCode(visit.id, c.code))}>Use</button>
+              <button onClick={() => run('code', () => api.setCode(visit.id, c.code), 'icd10')}>Use</button>
             </div>
           ))}
           {codes.notes?.map((n, i) => <p key={i} className="muted small">{n}</p>)}
@@ -292,9 +352,11 @@ export function Icd10({ visit, run, busy }) {
         codes, but cannot invent one, and the description that lands on the chart is the
         official wording rather than something typed from memory.
       */}
+      {/* Coding from here raises the path dialog too, same as the suggested list — the
+          decision follows the code wherever it was picked. */}
       <CodePicker
         disabled={!visit.working_diagnosis}
-        onPick={(code) => run('code', () => api.setCode(visit.id, code))}
+        onPick={(code) => run('code', () => api.setCode(visit.id, code), 'icd10')}
       />
     </section>
   )
@@ -341,13 +403,112 @@ function CodePicker({ onPick, disabled }) {
   )
 }
 
+// --- choosing a path -------------------------------------------------------------------
+
+/**
+ * The fork after coding the diagnosis.
+ *
+ * Two routes exist in the workflow and this is where the physician picks one. Ordering
+ * tests goes the long way round — investigations, results, then treatment. Going straight
+ * to treatment skips both, and the sidebar greys them out afterwards to say so.
+ *
+ * It is not irreversible. From treatment selection the engine still allows ordering tests
+ * later, so a doctor who chose one route and changed their mind is not stuck; they just go
+ * back to Investigations and order something.
+ */
+export function ChoosePath({ visit, run, busy, can, onDone, treatmentOnly }) {
+  const dx = visit.working_diagnosis
+
+  /*
+   * Offered whenever both routes are genuinely open, which is true twice: after coding the
+   * first diagnosis, and again at results review, where the engine allows both ordering
+   * more tests and moving on to treatment.
+   *
+   * Asked from what the engine permits rather than from the status name, so the second fork
+   * did not have to be described separately — it is the same question.
+   */
+  const again = visit.status === 'RESULTS_REVIEW'
+
+  if (!dx) {
+    return (
+      <div>
+        <p className="empty">Record a working diagnosis first.</p>
+        <button onClick={() => onDone?.('diagnosis')}>Go to diagnosis</button>
+      </div>
+    )
+  }
+
+  if (treatmentOnly && !again) {
+    return (
+      <div>
+        <div className="note warn">
+          This visit already went straight to treatment. Investigations and results are
+          skipped — you can still order tests from the Investigations step if that changes.
+        </div>
+        <div className="form-actions">
+          <button onClick={() => onDone?.('treatment')}>Go to treatment</button>
+          <button onClick={() => onDone?.('investigations')}>Order tests after all</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <p className="muted small">
+        <strong>{dx.label}</strong>{' '}
+        <span className="mono">{dx.icd10_code || 'no code'}</span>
+      </p>
+
+      <div className="card">
+        <div className="card-head">
+          <h2>{again ? 'Order further tests' : 'Order investigations'}</h2>
+        </div>
+        <p className="small">
+          {again
+            ? 'More is needed before treating. Goes back to test selection; results already recorded are kept.'
+            : 'Choose tests, upload and analyse the results, then decide whether they change the diagnosis before treating.'}
+        </p>
+        <button
+          className="primary"
+          disabled={busy || !can('TEST_SELECTION')}
+          onClick={() => run('path', () => again ? api.orderMore(visit.id) : api.investigate(visit.id))
+            .then((r) => { if (r) onDone?.('investigations') })}
+        >
+          {again ? 'Order more tests' : 'Investigate first'}
+        </button>
+      </div>
+
+      <div className="card">
+        <div className="card-head"><h2>Treat now</h2></div>
+        <p className="small">
+          {again
+            ? 'The results are enough to act on. Goes to treatment.'
+            : 'No tests needed. Goes directly to treatment; the investigations and results steps are skipped for this visit.'}
+        </p>
+        <button
+          disabled={busy || !can('TREATMENT_SELECTION')}
+          onClick={() => run('path', () => again ? api.treat(visit.id) : api.skipInvestigations(visit.id))
+            .then((r) => { if (r) onDone?.('treatment') })}
+        >
+          Straight to treatment
+        </button>
+      </div>
+
+      {/* Closing without choosing is allowed. The decision is still there to make, and the
+          ICD-10 step keeps a button for reopening this. */}
+      <p className="muted small">Close this to decide later.</p>
+    </div>
+  )
+}
+
 // --- investigations -------------------------------------------------------------------
 
 export function Investigations({ visit, run, busy, can }) {
   const [advice, setAdvice] = useState(null)
   const [chosen, setChosen] = useState({})
-  const [own, setOwn] = useState([])
-  const [draft, setDraft] = useState({ name: '', category: 'other' })
+  const [own, setOwn, clearOwn] = useDraft(`inv-own.${visit.id}`, [])
+  const [draft, setDraft] = useDraft(`inv-draft.${visit.id}`, { name: '', category: 'other' })
 
   const picked = advice?.investigations?.filter((i) => chosen[i.name]) ?? []
   const total = picked.length + own.length
@@ -380,8 +541,8 @@ export function Investigations({ visit, run, busy, can }) {
       if (!moved) return   // refused, and the error is already on screen
     }
 
-    const result = await run('order', () => api.orderInvestigations(visit.id, list))
-    if (result) { setChosen({}); setOwn([]) }
+    const result = await run('order', () => api.orderInvestigations(visit.id, list), 'investigations')
+    if (result) { setChosen({}); setOwn([]); clearOwn() }
   }
 
   return (
@@ -485,9 +646,11 @@ export function Investigations({ visit, run, busy, can }) {
  * Only analysed reports can be added. A transcription nobody has interpreted contributes
  * nothing, and the engine refuses it rather than reasoning over raw numbers.
  */
-export function Results({ visit, run, busy, patientId, can, setError, refreshStates, investigations }) {
+export function Results({ visit, run, busy, patientId, can, setError, refreshStates, investigations, goTo, startReassessing }) {
   const [reports, setReports] = useState([])
-  const [typed, setTyped] = useState('')
+  const [typed, setTyped, clearTyped] = useDraft(`typed-result.${visit.id}`, '')
+  const [editingResults, setEditingResults] = useState(false)
+  const [draftResults, setDraftResults] = useState(visit.results_summary ?? '')
   const [working, setWorking] = useState(null)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [elapsed, setElapsed] = useState(0)
@@ -496,11 +659,26 @@ export function Results({ visit, run, busy, patientId, can, setError, refreshSta
   const uploading = working === 'upload'
   const analysing = working === 'analyse'
 
+  /**
+   * Only this visit's documents.
+   *
+   * A patient's earlier reports are already part of the chart the assistant reads; listing
+   * them here as things to analyse and add would invite folding a report from March into a
+   * consultation in August. This step is about what came back for *these* tests.
+   */
   const refresh = useCallback(() => {
-    api.reports(patientId).then((d) => setReports(d.reports)).catch(setError)
-  }, [patientId])
+    api.reports(patientId)
+      .then((d) => setReports(d.reports.filter((r) => r.visit_id === visit.id)))
+      .catch(setError)
+  }, [patientId, visit.id])
 
   useEffect(() => { refresh() }, [refresh])
+
+  // Re-seed from the record whenever it changes, unless the doctor is mid-edit — replacing
+  // their text under them would be exactly the kind of loss the drafts exist to prevent.
+  useEffect(() => {
+    if (!editingResults) setDraftResults(visit.results_summary ?? '')
+  }, [visit.results_summary, editingResults])
 
   // From the API rather than from the engine payload: these carry database ids.
   const ordered = investigations ?? []
@@ -586,6 +764,10 @@ export function Results({ visit, run, busy, patientId, can, setError, refreshSta
   // WAITING_FOR_TESTS can move to RESULTS_REVIEW; once there, more results can still be
   // added — they arrive in batches, and the engine treats a repeat as an append.
   const canAddResults = can('RESULTS_REVIEW') || visit.status === 'RESULTS_REVIEW'
+
+  // Lines already in the visit summary, so the doctor can see what has been logged by hand
+  // without scrolling back up.
+  const typedResults = (visit.results_summary ?? '').split('\n').filter((l) => l.trim())
 
   const addSelected = () => {
     if (selected.length === 0) return
@@ -775,27 +957,120 @@ export function Results({ visit, run, busy, patientId, can, setError, refreshSta
       </div>
 
       <div className="card">
-        <div className="card-head"><h2>Or type the results</h2></div>
+        <div className="card-head">
+          <h2>Type a result</h2>
+          {typedResults.length > 0 && (
+            <span className="pill">{typedResults.length} recorded by hand</span>
+          )}
+        </div>
+        <p className="muted small">
+          For a result that arrived on paper, over the phone, or one the reader could not
+          make sense of. Recorded exactly as written — nothing interprets it.
+        </p>
         <div className="form">
+          {/* Draft-backed like every other form here: a typed result is often the fallback
+              after a failed upload, and losing it to a stray click would be the second
+              disappointment in a row. */}
           <textarea rows={3} value={typed} onChange={(e) => setTyped(e.target.value)}
-            placeholder="Chest X-ray: right lower lobe consolidation. CRP 142 mg/L." />
-          <button disabled={busy || !typed.trim() || !can('RESULTS_REVIEW')}
+            placeholder="D-dimer 140 mg/mL DDU (ref < 243). Chest X-ray: right lower lobe consolidation." />
+          {/*
+            Gated on `canAddResults`, not on `can('RESULTS_REVIEW')`. The old check went
+            false the moment the first result landed, so a doctor could record one result
+            and then never another — exactly wrong for results that arrive one at a time.
+          */}
+          <button disabled={busy || !typed.trim() || !canAddResults}
             onClick={() => run('results', () => api.recordResults(visit.id, typed))
-              .then(() => { setTyped(''); refreshStates() })}>
-            Record typed results
+              .then((r) => { if (r) { setTyped(''); clearTyped(); refreshStates() } })}>
+            Record this result
           </button>
         </div>
+        {!canAddResults && (
+          <p className="muted small">Available once tests have been ordered.</p>
+        )}
       </div>
 
       {visit.results_summary && (
-        <div className="card">
-          <div className="card-head"><h2>Recorded in this visit</h2></div>
-          <pre className="block">{visit.results_summary}</pre>
-          <p className="muted small">
-            Go back to <strong>Differential</strong> and re-assess — the assistant will take
-            these into account.
-          </p>
-        </div>
+        <>
+          <div className="card">
+            <div className="card-head">
+              <h2>Recorded in this visit</h2>
+              <button onClick={() => setEditingResults((v) => !v)}>
+                {editingResults ? 'Cancel' : 'Edit'}
+              </button>
+            </div>
+
+            {editingResults ? (
+              <div className="form">
+                {/*
+                  Correcting what the results say, before deciding what they mean. Recording
+                  appends — three uploads leave three blocks of machine output — so this is
+                  where a typo gets fixed or that gets tidied into something a colleague can
+                  read. It does not move the visit.
+                */}
+                <textarea
+                  rows={Math.min(20, Math.max(4, (draftResults || '').split('\n').length + 1))}
+                  value={draftResults}
+                  onChange={(e) => setDraftResults(e.target.value)}
+                />
+                <p className="muted small">
+                  Editing replaces what is recorded. The previous text is written to the
+                  audit log first, so nothing is lost.
+                </p>
+                <div className="form-actions">
+                  <button className="primary" disabled={busy || !draftResults.trim()}
+                    onClick={() => run('amend', () => api.amendResults(visit.id, draftResults))
+                      .then((r) => { if (r) setEditingResults(false) })}>
+                    {busy === 'amend' ? 'Saving…' : 'Save corrected results'}
+                  </button>
+                  <button onClick={() => {
+                    setDraftResults(visit.results_summary ?? '')
+                    setEditingResults(false)
+                  }}>Discard changes</button>
+                </div>
+              </div>
+            ) : (
+              <pre className="block">{visit.results_summary}</pre>
+            )}
+          </div>
+
+          {/*
+            The question the results exist to answer.
+            Asked explicitly rather than left implicit, because "the bloods are back" and
+            "the bloods changed my mind" are different conclusions, and only the doctor can
+            say which. Both branches stay open afterwards — this records a direction, not a
+            commitment.
+          */}
+          <div className="card">
+            <div className="card-head"><h2>Do these results change the diagnosis?</h2></div>
+            <p className="muted small">
+              Current working diagnosis:{' '}
+              <strong>{visit.working_diagnosis?.label ?? 'none recorded'}</strong>
+            </p>
+
+            <div className="form-actions">
+              <button
+                className="primary"
+                disabled={busy || !can('TREATMENT_SELECTION')}
+                onClick={() => run('treat', () => api.treat(visit.id), 'results')}
+              >
+                No — go to treatment
+              </button>
+
+              <button
+                disabled={busy}
+                onClick={() => { startReassessing?.(); goTo('differential') }}
+              >
+                Yes — reconsider
+              </button>
+            </div>
+
+            <p className="muted small">
+              Reconsidering re-runs the assistant with the results now in the chart, and the
+              diagnosis can be revised from the Diagnosis step. Ordering further tests is
+              available from Investigations.
+            </p>
+          </div>
+        </>
       )}
     </section>
   )
@@ -806,8 +1081,9 @@ export function Results({ visit, run, busy, patientId, can, setError, refreshSta
 export function Treatment({ visit, run, busy, can }) {
   const [advice, setAdvice] = useState(null)
   const [chosen, setChosen] = useState({})
-  const [own, setOwn] = useState([])
-  const [draft, setDraft] = useState({ name: '', dose: '', frequency: '', duration: '' })
+  const [own, setOwn, clearOwn] = useDraft(`rx-own.${visit.id}`, [])
+  const [draft, setDraft] = useDraft(`rx-draft.${visit.id}`,
+    { name: '', dose: '', frequency: '', duration: '' })
   const [ownWarnings, setOwnWarnings] = useState({ blocked: [], cautions: [] })
 
   const picked = (advice?.medications ?? []).filter((m) => chosen[m.name])
@@ -981,7 +1257,7 @@ export function Treatment({ visit, run, busy, can }) {
               frequency: m.frequency || null,
               duration: m.duration || null,
               rationale: m.rationale ?? null,
-            })))).then((r) => { if (r) { setChosen({}); setOwn([]) } })}>
+            })), 'treatment')).then((r) => { if (r) { setChosen({}); setOwn([]); clearOwn() } })}>
             Prescribe {all.length} medication{all.length === 1 ? '' : 's'}
           </button>
         </div>
@@ -1004,7 +1280,7 @@ export function Treatment({ visit, run, busy, can }) {
 
 // --- soap and closing ----------------------------------------------------------------------
 
-export function Soap({ visit, persisted }) {
+export function Soap({ visit, persisted, goTo }) {
   if (!persisted) {
     return <p className="empty">Available once the visit is part of the record.</p>
   }
@@ -1013,12 +1289,12 @@ export function Soap({ visit, persisted }) {
     <section>
       <div className="page-head"><h2>SOAP note</h2></div>
       <p className="muted small">
-        The record rearranged under four headings. No model is involved and nothing is
-        stored, so it cannot go stale against the chart.
+        Assembled from the record — no model is involved. Review it, correct anything
+        wrong, and save; only then does it enter the patient's profile.
       </p>
       {/* Same component the patient profile uses, so the note read afterwards is the
           document seen during the consultation. */}
-      <SoapNote visitId={visit.id} />
+      <SoapNote visitId={visit.id} editable />
     </section>
   )
 }

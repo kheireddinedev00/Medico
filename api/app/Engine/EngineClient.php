@@ -256,6 +256,15 @@ class EngineClient
             );
         }
 
+        // 502 is the engine reporting that the model failed it, not that it is down. The
+        // engine is answering — it is telling us the reply was unusable.
+        if ($response->status() === 502) {
+            throw new EngineModelException(
+                $body['detail'] ?? 'The assistant returned a reply that could not be used.',
+                $body['error'] ?? 'model_reply_invalid',
+            );
+        }
+
         throw new EngineUnavailableException(
             "Engine call to {$path} failed with HTTP {$response->status()}: ".$response->body()
         );

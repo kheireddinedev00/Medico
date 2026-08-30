@@ -8,6 +8,8 @@ use App\Engine\EngineClient;
 use App\Engine\VisitWriter;
 use App\Models\AssistantRun;
 use App\Models\Patient;
+use App\Models\Report;
+use App\Models\SoapNote;
 use App\Models\Visit;
 use App\Models\WaitingRoomEntry;
 use App\Support\Auditor;
@@ -188,6 +190,108 @@ class ConsultationController extends Controller
             'message' => $entry
                 ? 'The patient has left the waiting room. The visit stays open.'
                 : 'No waiting-room entry to close.',
+        ]);
+    }
+
+    /**
+     * Empty this consultation and start it again.
+     *
+     * The engine decides what an empty visit looks like; this only stores the answer. Note
+     * it comes back with `persist: false`, so the row is removed rather than blanked — a
+     * reset visit is indistinguishable from one that was opened and never committed to,
+     * which is exactly what it now is.
+     *
+     * The audit entry is written before the erase, holding the whole visit, so what was
+     * wiped is recoverable from the log even though it is gone from the record.
+     */
+    public function reset(Request $request, string $visitId): JsonResponse
+    {
+        [$patient, $chart] = $this->chartFor($request, $visitId);
+
+        $existing = Visit::find($visitId);
+
+        if ($existing) {
+            Auditor::record(
+                $request->user()->id,
+                'consultation.reset',
+                $existing,
+                $existing->toEngineVisit(),
+                null,
+                $request->ip(),
+            );
+        }
+
+        $result = $this->engine->transition('reset', ['chart' => $chart]);
+
+        // Nothing to persist, so the emptied visit leaves the record entirely and is held
+        // as a draft again — the same state a freshly opened consultation is in.
+        $existing?->delete();
+        DraftVisits::put($request->user()->id, $result['visit']);
+
+        return response()->json([
+            'visit' => $result['visit'],
+            'persisted' => false,
+            'investigations' => [],
+            'patient' => ['id' => $patient->id, 'full_name' => $patient->full_name],
+            'message' => 'The consultation has been emptied. Nothing is recorded until a diagnosis is chosen.',
+        ]);
+    }
+
+    // --- the saved SOAP note ------------------------------------------------------
+
+    /**
+     * The note as the physician saved it, if they have.
+     *
+     * Separate from `soap()`, which generates a fresh draft from the record. This returns
+     * what a human signed off, or null when nobody has yet.
+     */
+    public function savedSoap(Request $request, string $visitId): JsonResponse
+    {
+        $note = SoapNote::with('author:id,name')->where('visit_id', $visitId)->first();
+
+        return response()->json([
+            'note' => $note ? [
+                'subjective' => $note->subjective,
+                'objective' => $note->objective,
+                'assessment' => $note->assessment,
+                'plan' => $note->plan,
+                'saved_at' => $note->updated_at,
+                'saved_by' => $note->author?->name,
+            ] : null,
+        ]);
+    }
+
+    /**
+     * Save the physician's reviewed note.
+     *
+     * This is the point at which a draft becomes part of the chart. Until it is called, the
+     * note exists only as a projection that anyone can regenerate; afterwards it is a
+     * document with an author and a timestamp, and it appears on the patient's profile.
+     */
+    public function saveSoap(Request $request, string $visitId): JsonResponse
+    {
+        $data = $request->validate([
+            'subjective' => ['nullable', 'string'],
+            'objective' => ['nullable', 'string'],
+            'assessment' => ['nullable', 'string'],
+            'plan' => ['nullable', 'string'],
+            // The draft they started from, so the record can show what was proposed
+            // alongside what was written.
+            'generated' => ['nullable', 'array'],
+        ]);
+
+        $visit = Visit::findOrFail($visitId);
+
+        $note = SoapNote::updateOrCreate(
+            ['visit_id' => $visit->id],
+            $data + ['saved_by' => $request->user()->id],
+        );
+
+        Auditor::record($request->user()->id, 'soap.saved', $visit, null, null, $request->ip());
+
+        return response()->json([
+            'note' => $note->fresh(),
+            'message' => 'Saved to the patient record.',
         ]);
     }
 
@@ -373,7 +477,65 @@ class ConsultationController extends Controller
             'resulted.*' => ['string'],
         ]);
 
+        /*
+         * Say which tests these reports actually answer.
+         *
+         * Left unstated, the engine marks *every* outstanding investigation as resulted —
+         * correct only when the doctor has confirmed they all arrived. Results do not arrive
+         * together: adding the D-dimer would quietly close out the chest X-ray and the
+         * culture too, and the visit would then claim results for tests nobody had seen.
+         *
+         * Laravel is the right place to answer this, because the report-to-investigation
+         * link lives here; the engine has never heard of it.
+         */
+        if (empty($data['resulted'])) {
+            $answered = Report::whereIn('id', $data['report_ids'])
+                ->whereNotNull('investigation_id')
+                ->with('investigation:id,name')
+                ->get()
+                ->pluck('investigation.name')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            // Only when something is known. An empty list would mark nothing as resulted,
+            // which is right for a result that answers no ordered test — it still gets
+            // recorded, it just does not close anything out.
+            $data['resulted'] = $answered;
+        }
+
         return $this->run($request, $visitId, 'record-results-from-reports', $data);
+    }
+
+    /**
+     * Correct what the recorded results say.
+     *
+     * Not a transition — the visit stays where it is. Amending what results *say* is a
+     * different act from deciding what they *mean*, and only the second moves the encounter
+     * on. The previous text is written to the audit log first, because an edit that leaves
+     * no trace of what it replaced is not a correction, it is a rewrite.
+     */
+    public function amendResults(Request $request, string $visitId): JsonResponse
+    {
+        $data = $request->validate([
+            'summary' => ['required', 'string'],
+        ]);
+
+        $visit = Visit::find($visitId);
+
+        if ($visit) {
+            Auditor::record(
+                $request->user()->id,
+                'consultation.results_amended',
+                $visit,
+                ['results_summary' => $visit->results_summary],
+                ['results_summary' => $data['summary']],
+                $request->ip(),
+            );
+        }
+
+        return $this->run($request, $visitId, 'amend-results', $data);
     }
 
     public function reviseDiagnosis(Request $request, string $visitId): JsonResponse

@@ -378,3 +378,99 @@ def test_results_review_still_has_only_its_two_exits(new_visit):
         "TEST_SELECTION",
         "TREATMENT_SELECTION",
     ]
+
+
+def test_a_revised_diagnosis_can_be_recoded(new_visit):
+    """Revising is allowed at RESULTS_REVIEW; coding has to be, too.
+
+    Otherwise a physician changes the diagnosis after seeing results and is left unable to
+    change its code — so the previous diagnosis's code stays attached to the new one, which
+    is worse in a record than having no code at all.
+    """
+    visit = post("/consultation/select-diagnosis", {
+        "chart": chart(new_visit), "label": "Community-acquired pneumonia",
+    })["visit"]
+    visit = post("/consultation/icd10-code", {"chart": chart(visit), "code": "J18.9"})["visit"]
+    visit = post("/consultation/investigate", {"chart": chart(visit)})["visit"]
+    visit = post("/consultation/order-investigations", {
+        "chart": chart(visit), "investigations": [{"name": "CT pulmonary angiogram"}],
+    })["visit"]
+    visit = post("/consultation/record-results", {
+        "chart": chart(visit), "summary": "CTPA: segmental pulmonary embolus.",
+    })["visit"]
+
+    visit = post("/consultation/revise-diagnosis", {
+        "chart": chart(visit), "label": "Pulmonary embolism",
+    })["visit"]
+    # The old code does not survive the revision — it described a different illness.
+    assert visit["working_diagnosis"]["icd10_code"] is None
+
+    visit = post("/consultation/icd10-code", {"chart": chart(visit), "code": "I26.9"})["visit"]
+    assert visit["working_diagnosis"]["icd10_code"] == "I26.9"
+    assert visit["status"] == "RESULTS_REVIEW"
+
+
+def test_coding_is_still_refused_where_there_is_nothing_to_code(new_visit):
+    """Relaxing where coding is allowed must not make it allowed everywhere."""
+    response = client.post(
+        "/consultation/icd10-code", json={"chart": chart(new_visit), "code": "J18.9"}
+    )
+
+    assert response.status_code == 409
+    assert "working diagnosis" in response.json()["detail"].lower()
+
+
+def test_results_can_be_corrected_without_moving_the_visit(new_visit):
+    """Recording appends, which is right while results arrive separately — but appending
+    alone leaves no way to fix a typo or tidy three runs of machine output into something
+    readable. Amending replaces, and is deliberately not a transition."""
+    visit = post("/consultation/select-diagnosis", {
+        "chart": chart(new_visit), "label": "Suspected pulmonary embolism",
+    })["visit"]
+    visit = post("/consultation/investigate", {"chart": chart(visit)})["visit"]
+    visit = post("/consultation/order-investigations", {
+        "chart": chart(visit), "investigations": [{"name": "D-dimer"}],
+    })["visit"]
+    visit = post("/consultation/record-results", {
+        "chart": chart(visit), "summary": "D-dimer 140 typo hree",
+    })["visit"]
+
+    visit = post("/consultation/amend-results", {
+        "chart": chart(visit), "summary": "D-dimer 140 mg/mL DDU (ref < 243) — normal.",
+    })["visit"]
+
+    assert visit["results_summary"] == "D-dimer 140 mg/mL DDU (ref < 243) — normal."
+    # The visit has not moved: correcting what results say is not deciding what they mean.
+    assert visit["status"] == "RESULTS_REVIEW"
+
+
+def test_results_cannot_be_amended_into_nothing(new_visit):
+    """Emptying the field would leave the record claiming tests were reviewed with nothing
+    to show for it."""
+    visit = post("/consultation/select-diagnosis", {
+        "chart": chart(new_visit), "label": "Pneumonia",
+    })["visit"]
+    visit = post("/consultation/investigate", {"chart": chart(visit)})["visit"]
+    visit = post("/consultation/order-investigations", {
+        "chart": chart(visit), "investigations": [{"name": "CRP"}],
+    })["visit"]
+    visit = post("/consultation/record-results", {"chart": chart(visit), "summary": "CRP 142."})["visit"]
+
+    response = client.post(
+        "/consultation/amend-results", json={"chart": chart(visit), "summary": "   "}
+    )
+
+    assert response.status_code == 409
+
+
+def test_results_cannot_be_amended_before_there_are_any(new_visit):
+    visit = post("/consultation/select-diagnosis", {
+        "chart": chart(new_visit), "label": "Pneumonia",
+    })["visit"]
+
+    response = client.post(
+        "/consultation/amend-results", json={"chart": chart(visit), "summary": "anything"}
+    )
+
+    assert response.status_code == 409
+    assert "RESULTS_REVIEW" in response.json()["detail"]

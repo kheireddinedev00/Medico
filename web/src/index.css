@@ -308,3 +308,13 @@ pre.block {
 .soap-note ul { margin: 4px 0; padding-left: 20px; }
 .soap-note ul.bare { list-style: none; padding-left: 0; }
 .soap-note ul.bare li { font-weight: 600; }
+
+/* A step the visit skipped. Greyed rather than hidden, so its absence is explained. */
+.steps button.skipped { opacity: .45; }
+.steps button.skipped:hover { background: none; color: var(--sidebar-link); cursor: pointer; }
+
+.soap-note details.card summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.soap-note textarea { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+
+/* Sized by its content, so a note is read whole rather than through a slot. */
+textarea.grow { resize: none; overflow: hidden; min-height: 4.5rem; line-height: 1.5; }

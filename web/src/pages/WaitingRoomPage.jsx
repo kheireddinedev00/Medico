@@ -4,6 +4,7 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 import Modal from '../components/Modal'
 import { NewPatientForm } from '../forms/PatientForms'
+import { useDraft } from '../useDraft'
 
 const VITALS = [
   ['temperature_c', 'Temp °C', '36.8'],
@@ -636,8 +637,11 @@ function PriorityForm({ entry, onSaved, onCancel, onError }) {
  */
 function VitalsForm({ entry, onSaved, onCancel, onError }) {
   const obs = entry.triage_observations ?? {}
-  const [values, setValues] = useState(() =>
-    Object.fromEntries(VITALS.map(([k]) => [k, entry.vitals[k] ?? '']))
+  // Held in the draft store: a nurse who closes the form to check something should not
+  // come back to an empty one and have to measure again.
+  const [values, setValues, clearValues] = useDraft(
+    `queue-vitals.${entry.id}`,
+    Object.fromEntries(VITALS.map(([k]) => [k, entry.vitals[k] ?? ''])),
   )
   const [complaint, setComplaint] = useState(entry.chief_complaint ?? '')
   const [notes, setNotes] = useState(entry.triage_notes ?? '')
@@ -663,7 +667,7 @@ function VitalsForm({ entry, onSaved, onCancel, onError }) {
       is_pregnant: fromTriState(pregnant),
       hypercapnic_target_range: targetRange,
     }
-    try { await api.recordVitals(entry.id, payload); await onSaved() }
+    try { await api.recordVitals(entry.id, payload); clearValues(); await onSaved() }
     catch (err) { onError(err) } finally { setBusy(false) }
   }
 

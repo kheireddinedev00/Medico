@@ -325,3 +325,139 @@ def test_results_from_reports_reach_the_assistant_prompt(repos):
     prompt_text = format_findings(resumed.visit)
     assert "INVESTIGATION RESULTS" in prompt_text
     assert "WBC: 15.8" in prompt_text
+
+
+# --------------------------------------------------------------------------------
+# The corrective retry
+# --------------------------------------------------------------------------------
+
+
+def _sample_image(tmp_path):
+    from PIL import Image
+
+    path = tmp_path / "report.png"
+    Image.new("RGB", (1200, 1600), "white").save(path)
+    return path
+
+
+VALID_REPLY = (
+    '{"document": {"report_type": "D-DIMER"}, "patient": {}, "results": [], '
+    '"uncertain_fields": []}'
+)
+
+
+def test_a_dropped_comma_is_recovered_on_one_retry(tmp_path):
+    """A small free model occasionally drops a comma. Throwing away a whole page of
+    transcription over punctuation, and telling the physician to upload it again, is a
+    worse answer than asking once more."""
+    from unittest.mock import Mock
+
+    from report_reader.extractor import extract_report
+
+    client = Mock()
+    client.extract.side_effect = ['{"document": {"a": 1 "b": 2}}', VALID_REPLY]
+
+    result = extract_report(_sample_image(tmp_path), client=client)
+
+    assert result["document"]["report_type"] == "D-DIMER"
+    assert client.extract.call_count == 2
+    # The second attempt says what was wrong, rather than hoping for a different roll.
+    assert "not a single valid JSON object" in client.extract.call_args_list[1][0][0]
+
+
+def test_the_first_reply_is_used_when_it_is_already_valid(tmp_path):
+    """The retry costs another full model call, so it only happens on failure."""
+    from unittest.mock import Mock
+
+    from report_reader.extractor import extract_report
+
+    client = Mock()
+    client.extract.return_value = VALID_REPLY
+
+    extract_report(_sample_image(tmp_path), client=client)
+
+    assert client.extract.call_count == 1
+
+
+def test_a_persistent_failure_still_raises(tmp_path):
+    """Two bad replies is not a slip. The raw output is surfaced rather than retried into
+    a different kind of wrong."""
+    from unittest.mock import Mock
+
+    import pytest as _pytest
+
+    from report_reader.extractor import ExtractionError, extract_report
+
+    client = Mock()
+    client.extract.side_effect = ["nonsense", "still nonsense"]
+
+    with _pytest.raises(ExtractionError):
+        extract_report(_sample_image(tmp_path), client=client)
+
+    assert client.extract.call_count == 2
+
+
+# --------------------------------------------------------------------------------
+# Repairing the model's punctuation, and only its punctuation
+# --------------------------------------------------------------------------------
+
+
+MISSING_COMMA = '''{
+  "document": {"report_type": "D-DIMER", "laboratory_name": "DRLOGY PATHOLOGY LAB"},
+  "patient": {"name": "Yash M. Patel", "age": "21 Years"}
+  "results": [
+    {
+      "parameter": "D-DIMER, QUANTITATIVE",
+      "value": 140.00,
+      "unit": "mg/mL DDU",
+      "reference_range": {"low": null, "high": null, "text": "< 243.00"}
+    }
+  ],
+  "uncertain_fields": []
+}'''
+
+
+def test_a_missing_comma_does_not_lose_the_whole_report():
+    """The real failure from a D-dimer report: one comma missing between two keys.
+
+    Discarding a full page of transcription over that, and asking the physician to type the
+    report out instead, is a far worse answer than repairing punctuation nobody disputes.
+    """
+    from report_reader.extractor import parse_and_validate
+
+    report = parse_and_validate(MISSING_COMMA)
+
+    assert report.document.report_type == "D-DIMER"
+    assert report.results[0].value == 140.0
+    assert report.results[0].unit == "mg/mL DDU"
+
+
+def test_the_repair_never_alters_a_value():
+    """Punctuation only. A repair that guessed at content would be fabricating clinical
+    data, which is worse than failing outright."""
+    from report_reader.extractor import parse_and_validate
+
+    report = parse_and_validate(MISSING_COMMA)
+
+    assert report.results[0].reference_range.text == "< 243.00"
+    assert report.patient.name == "Yash M. Patel"
+
+
+def test_a_trailing_comma_is_repaired():
+    from report_reader.extractor import parse_and_validate
+
+    report = parse_and_validate(
+        '{"document": {"report_type": "CBC",}, "results": [], "uncertain_fields": [],}'
+    )
+
+    assert report.document.report_type == "CBC"
+
+
+def test_genuinely_unparseable_output_is_still_refused():
+    """The repair is narrow on purpose. Anything it cannot fix confidently still fails."""
+    import pytest as _pytest
+
+    from report_reader.extractor import ExtractionError, parse_and_validate
+
+    with _pytest.raises(ExtractionError):
+        parse_and_validate("the report says the d-dimer is raised")

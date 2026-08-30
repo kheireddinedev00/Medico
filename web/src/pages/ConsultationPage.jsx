@@ -4,17 +4,23 @@ import { api, ApiError } from '../api'
 import Modal from '../components/Modal'
 import PatientChart from '../components/PatientChart'
 import * as S from '../consultation/Sections'
+import { useDraft } from '../useDraft'
 
 /**
  * One consultation.
  *
- * The steps in the sidebar follow the engine's workflow, and which transitions are legal
- * comes from `next-states` — answered out of the engine's own transition table. Nothing
- * here keeps a copy of the workflow, so nothing here can drift from it.
+ * The steps follow the engine's workflow, and which transitions are legal comes from
+ * `next-states` — answered out of the engine's own transition table. Nothing here keeps a
+ * copy of the workflow, so nothing here can drift from it.
  *
- * Every step stays *readable* at any point; what the visit's state governs is the buttons
- * inside. Locking the navigation would hide the record from the person responsible for it,
- * and a doctor waiting on bloods still has every right to read the treatment options.
+ * Two navigation rules, and they pull in opposite directions on purpose:
+ *
+ * Finishing a step moves you to the next one, because that is what you were going to do
+ * anyway and making someone click twice for an inevitability is just friction.
+ *
+ * But every step stays reachable at all times. A doctor mid-treatment who wants to reread
+ * the findings, or re-run the differential now that results are in, must be able to — the
+ * workflow governs what can be *recorded*, never what can be looked at.
  */
 
 const STEPS = [
@@ -29,6 +35,18 @@ const STEPS = [
   { key: 'close', label: 'Close visit', done: (v) => v.status === 'COMPLETED' },
 ]
 
+/** Where finishing one step naturally leads. */
+const NEXT_AFTER = {
+  findings: 'differential',
+  differential: 'diagnosis',
+  diagnosis: 'icd10',
+  // icd10 opens the path dialog rather than moving to a step — see run().
+  investigations: 'results',
+  results: 'treatment',
+  treatment: 'soap',
+  soap: 'close',
+}
+
 export default function ConsultationPage() {
   const { visitId } = useParams()
   const navigate = useNavigate()
@@ -36,13 +54,32 @@ export default function ConsultationPage() {
   const [visit, setVisit] = useState(null)
   const [patient, setPatient] = useState(null)
   const [persisted, setPersisted] = useState(false)
-  const [next, setNext] = useState([])
+  // The transitions the engine says are legal, or null when that is not known — after a
+  // failed lookup, or before the visit is part of the record.
+  const [next, setNext] = useState(null)
+  const [statesUnknown, setStatesUnknown] = useState(false)
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(null)
   const [step, setStep] = useState(null)
   const [showChart, setShowChart] = useState(false)
   const [investigations, setInvestigations] = useState([])
   const [releasing, setReleasing] = useState(false)
+  const [resetting, setResetting] = useState(false)
+  const [choosingPath, setChoosingPath] = useState(false)
+
+  /*
+   * Whether the doctor is reconsidering the diagnosis in the light of results.
+   *
+   * Intent, not record. The engine has no REASSESSING state and should not gain one — the
+   * visit really is at RESULTS_REVIEW, and inventing a state to describe what someone is
+   * currently thinking about would put a second, softer meaning into a table that is
+   * supposed to say exactly where an encounter stands.
+   *
+   * So it lives in the browser, keyed to the visit so it survives navigating between steps,
+   * and the badge below shows it alongside the real status rather than in place of it.
+   */
+  const [reassessing, setReassessing, clearReassessing] =
+    useDraft(`reassessing.${visitId}`, false)
 
   const load = useCallback(async () => {
     try {
@@ -51,7 +88,6 @@ export default function ConsultationPage() {
       setPatient(d.patient)
       setPersisted(d.persisted)
       setInvestigations(d.investigations ?? [])
-      // Land where the work actually is: a visit waiting on tests opens at Results.
       setStep((s) => s ?? (d.visit.status === 'WAITING_FOR_TESTS' ? 'results'
         : d.visit.chief_complaint ? 'differential' : 'findings'))
     } catch (e) { setError(e) }
@@ -60,14 +96,38 @@ export default function ConsultationPage() {
   useEffect(() => { load() }, [load])
 
   const refreshStates = useCallback(() => {
-    if (!visit || !persisted) return setNext([])
-    api.nextStates(visit.id).then((d) => setNext(d.next)).catch(() => setNext([]))
+    // null means "we do not know", which is different from "nothing is allowed".
+    if (!visit || !persisted) return setNext(null)
+
+    api.nextStates(visit.id)
+      .then((d) => { setNext(d.next); setStatesUnknown(false) })
+      .catch(() => {
+        // Do NOT empty the list. Emptying it disables every action in the workflow, with
+        // no explanation, because a status lookup failed — the doctor is left clicking
+        // dead buttons while the record is perfectly fine.
+        setNext(null)
+        setStatesUnknown(true)
+      })
   }, [visit?.id, visit?.status, persisted])
 
   useEffect(() => { refreshStates() }, [refreshStates])
 
-  /** Run one call, absorb the result, and surface a clinical refusal as an explanation. */
-  const run = useCallback(async (label, fn) => {
+  // Reconsidering ends when the visit moves on — to treatment, or back to test selection.
+  useEffect(() => {
+    if (reassessing && visit && visit.status !== 'RESULTS_REVIEW') {
+      setReassessing(false)
+      clearReassessing()
+    }
+  }, [visit?.status, reassessing])
+
+  /**
+   * Run one call, absorb the result, and surface a clinical refusal as an explanation.
+   *
+   * `advance` names the step just completed; on success the view moves to whatever follows
+   * it. Callers that are only fetching a suggestion leave it out — asking the assistant for
+   * a differential has not finished anything.
+   */
+  const run = useCallback(async (label, fn, advance = null) => {
     setBusy(label)
     setError(null)
     try {
@@ -77,6 +137,10 @@ export default function ConsultationPage() {
         if (result.persisted !== undefined) setPersisted(result.persisted)
         if (result.investigations) setInvestigations(result.investigations)
       }
+      // Coding the diagnosis is the moment the two routes diverge, so the fork is asked
+      // then — as a dialog, because it is one decision rather than a place to work.
+      if (advance === 'icd10') setChoosingPath(true)
+      else if (advance && NEXT_AFTER[advance]) setStep(NEXT_AFTER[advance])
       return result
     } catch (e) {
       setError(e)
@@ -99,24 +163,45 @@ export default function ConsultationPage() {
 
   if (!visit) return <p className="empty centered">Opening consultation…</p>
 
+  /*
+   * Which route through the workflow this visit took.
+   *
+   * Derived rather than stored: a visit past ICD-10 with nothing ordered went straight to
+   * treatment. Keeping a separate flag would be a second answer to a question the record
+   * already answers, and the two would eventually disagree.
+   */
+  const pastIcd10 = !['INITIAL_ASSESSMENT', 'ICD10_SELECTION'].includes(visit.status)
+  const ordered = (visit.ordered_investigations?.length ?? 0) > 0
+  const treatmentOnly = pastIcd10 && !ordered && visit.status !== 'TEST_SELECTION'
+
   const shared = {
-    visit, persisted, busy, run, setError, refreshStates, investigations,
+    visit, persisted, busy, run, setError, refreshStates, investigations, treatmentOnly,
     patientId: visit.patient_id,
-    can: (state) => next.includes(state),
+    goTo: setStep,
+    choosePath: () => setChoosingPath(true),
+    reassessing,
+    startReassessing: () => setReassessing(true),
+    /*
+     * Fail open, deliberately.
+     *
+     * This is a convenience: the engine is the authority on what is allowed, and it refuses
+     * anything illegal with a message written for a clinician. So when the legal set is
+     * unknown the button stays live — the worst case is a readable refusal, where the
+     * alternative was a frozen workflow with nothing on screen to explain it.
+     */
+    can: (state) => next === null || next.includes(state),
   }
 
   const Section = {
     findings: S.Findings, differential: S.Differential, diagnosis: S.Diagnosis,
-    icd10: S.Icd10, investigations: S.Investigations, results: S.Results,
-    treatment: S.Treatment, soap: S.Soap, close: S.CloseVisit,
+    icd10: S.Icd10, investigations: S.Investigations,
+    results: S.Results, treatment: S.Treatment, soap: S.Soap, close: S.CloseVisit,
   }[step] ?? S.Findings
 
   return (
     <div className="consultation">
       <aside className="side">
         <div>
-          {/* The chart is one click away at every step. A doctor mid-consultation needs to
-              check an allergy or a past visit without abandoning what they are doing. */}
           <h2>
             <button className="link chart-link" onClick={() => setShowChart(true)}>
               {patient?.full_name ?? 'Consultation'}
@@ -126,51 +211,65 @@ export default function ConsultationPage() {
         </div>
 
         <div className="stack">
-          <span className="pill info">{visit.status.replace(/_/g, ' ')}</span>
-          {/* Not a loading state: this says whether the encounter exists in the record. */}
+          {reassessing && visit.status === 'RESULTS_REVIEW' ? (
+            <>
+              <span className="pill warn">REASSESSING</span>
+              {/* The record state stays on screen. A badge that replaced it would be the
+                  interface telling a comfortable story about where the visit actually is. */}
+              <span className="muted small">record state: results review</span>
+            </>
+          ) : (
+            <span className="pill info">{visit.status.replace(/_/g, ' ')}</span>
+          )}
           <span className={persisted ? 'pill ok' : 'pill warn'}>
             {persisted ? 'in the record' : 'not recorded yet'}
           </span>
         </div>
 
         <nav className="steps">
-          {STEPS.map((s) => (
-            <button key={s.key} className={step === s.key ? 'on' : ''} onClick={() => setStep(s.key)}>
-              <span>{s.label}</span>
-              <span className="row" style={{ gap: 4 }}>
-                {s.ai && <span className="tag tag-ai">AI</span>}
-                {s.done?.(visit) && <span className="done">✓</span>}
-              </span>
-            </button>
-          ))}
+          {STEPS.map((s) => {
+            // Greyed, not hidden, on the treatment-only path. Hiding them would leave the
+            // doctor wondering where the investigations went; this says they were skipped.
+            const skipped = treatmentOnly && ['investigations', 'results'].includes(s.key)
+            return (
+              <button
+                key={s.key}
+                className={`${step === s.key ? 'on' : ''} ${skipped ? 'skipped' : ''}`}
+                onClick={() => setStep(s.key)}
+                title={skipped ? 'Skipped — this visit went straight to treatment' : undefined}
+              >
+                <span>{s.label}</span>
+                <span className="row" style={{ gap: 4 }}>
+                  {s.ai && <span className="tag tag-ai">AI</span>}
+                  {skipped ? <span className="done muted">—</span>
+                    : s.done?.(visit) && <span className="done">✓</span>}
+                </span>
+              </button>
+            )
+          })}
         </nav>
 
         {!persisted && (
           <p className="muted small">
-            Nothing is written until a diagnosis is chosen. Leave now and this consultation
-            leaves no trace.
+            Nothing is written until a diagnosis is chosen.
           </p>
         )}
 
-        {/*
-          Two ways out, and they mean different things.
+        {/* Said out loud rather than silently disabling things. */}
+        {statesUnknown && (
+          <p className="muted small">
+            Could not read the workflow state — the assistant may be down. Steps stay
+            available; anything not allowed will say so when you try it.
+          </p>
+        )}
 
-          Back steps away without ending anything: the patient is still in the clinic, still
-          in the queue, and the consultation is resumable from there. It is what a doctor
-          does to check something.
-
-          Release says the patient can go. The visit stays open — one waiting on tests is
-          still waiting — but the waiting-room row closes and the next attendance will be
-          measured afresh.
-        */}
         <div className="exits">
-          <button className="back" onClick={() => navigate(-1)}>
-            ← Back
-          </button>
+          <button className="back" onClick={() => navigate(-1)}>← Back</button>
           <p className="muted small">Keeps the patient in the waiting room.</p>
 
-          <button disabled={busy} onClick={() => setReleasing(true)}>
-            Release patient
+          <button disabled={busy} onClick={() => setReleasing(true)}>Release patient</button>
+          <button className="danger" disabled={busy} onClick={() => setResetting(true)}>
+            Reset visit
           </button>
         </div>
       </aside>
@@ -186,6 +285,54 @@ export default function ConsultationPage() {
         )}
         <Section {...shared} />
       </div>
+
+      {choosingPath && (
+        <Modal title="What next?" onClose={() => setChoosingPath(false)}>
+          {/*
+            Repeated inside the dialog on purpose. The panel's copy of this is *behind* the
+            backdrop, so a refusal raised by one of these buttons was invisible — the button
+            looked simply broken, which is the worst way for a workflow rule to be enforced.
+          */}
+          {error && (
+            <div className={error instanceof ApiError && error.isRefusal ? 'note warn' : 'note bad'}>
+              {error instanceof ApiError && error.isRefusal && (
+                <strong>Not allowed at this step. </strong>
+              )}
+              {error.message}
+            </div>
+          )}
+          <S.ChoosePath
+            {...shared}
+            onDone={(next) => { setChoosingPath(false); if (next) setStep(next) }}
+          />
+        </Modal>
+      )}
+
+      {resetting && (
+        <Modal title="Reset this consultation?" onClose={() => setResetting(false)}>
+          <div className="note bad">
+            Everything recorded in this visit is erased — findings, diagnosis, ordered tests,
+            results and prescriptions. The consultation starts again from the beginning.
+          </div>
+          <p className="muted small">
+            Uploaded reports are kept and detached; a result that arrived belongs to the
+            patient regardless. The whole visit is written to the audit log first, so what
+            was erased can still be read there.
+          </p>
+          <div className="form-actions">
+            <button className="danger" disabled={busy} onClick={async () => {
+              const r = await run('reset', () => api.resetConsultation(visit.id))
+              if (r) {
+                setResetting(false)
+                setStep('findings')
+                // The row is gone; the emptied visit is a draft again, under the same URL.
+                navigate(`/consultations/${r.visit.id}`, { replace: true })
+              }
+            }}>Erase and start again</button>
+            <button onClick={() => setResetting(false)}>Keep what is recorded</button>
+          </div>
+        </Modal>
+      )}
 
       {releasing && (
         <Modal title="Release the patient?" onClose={() => setReleasing(false)}>

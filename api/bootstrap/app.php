@@ -1,6 +1,7 @@
 <?php
 
 use App\Engine\EngineContractException;
+use App\Engine\EngineModelException;
 use App\Engine\EngineRefusedException;
 use App\Engine\EngineUnavailableException;
 use App\Http\Middleware\EnsureRole;
@@ -42,6 +43,21 @@ return Application::configure(basePath: dirname(__DIR__))
                 'message' => 'The clinical engine rejected the request payload.',
                 'detail' => app()->isLocal() ? $e->detail : null,
             ], 500);
+        });
+
+        /*
+         * The model failed, not the service.
+         *
+         * Reported separately from "unavailable" because the two demand different things
+         * from whoever reads them: this one usually clears on a retry, and saying the
+         * assistant is down when it is plainly running teaches people to ignore the errors.
+         */
+        $exceptions->render(function (EngineModelException $e, Request $request) {
+            return response()->json([
+                'message' => 'The assistant could not read that reliably. Nothing was saved — try again.',
+                'detail' => app()->isLocal() ? $e->getMessage() : null,
+                'retryable' => true,
+            ], 502);
         });
 
         // The assistant is unavailable. Said plainly, because an empty differential
