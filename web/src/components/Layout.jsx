@@ -31,8 +31,18 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [waiting, setWaiting] = useState(null)
 
+  /*
+   * Whether the assistant is reachable, checked on arrival and then every two minutes.
+   *
+   * This was already once-per-mount, but the shell mounts once and stays — so the badge
+   * could sit on a stale "offline" for an entire session after the engine came back up.
+   * A poll fixes that and costs one request every two minutes.
+   */
   useEffect(() => {
-    api.engineHealth().then(setEngine).catch(() => setEngine(null))
+    const check = () => api.engineHealth().then(setEngine).catch(() => setEngine(null))
+    check()
+    const tick = setInterval(check, 120_000)
+    return () => clearInterval(tick)
   }, [])
 
   /*
@@ -43,15 +53,23 @@ export default function Layout() {
    */
   const refreshCount = useCallback(() => {
     if (user.role === 'patient') return
-    api.stats()
-      .then((d) => {
-        const s = d.stats ?? {}
-        setWaiting(user.role === 'doctor' ? s.waiting_for_me : s.waiting ?? s.activity?.waiting_now)
-      })
+    api.waitingCount()
+      .then((d) => setWaiting(d.waiting))
       .catch(() => setWaiting(null))
   }, [user.role])
 
-  useEffect(() => { refreshCount() }, [refreshCount, pathname])
+  /*
+   * Once on arrival, then on a timer — not on every navigation.
+   *
+   * Refetching per page change cost a request on every click to move a number that
+   * changes when someone walks through the door, not when a doctor opens a chart. A
+   * minute is well inside the time it takes to act on a new arrival.
+   */
+  useEffect(() => {
+    refreshCount()
+    const tick = setInterval(refreshCount, 60_000)
+    return () => clearInterval(tick)
+  }, [refreshCount])
 
   const toggleCollapse = () => {
     setCollapsed((was) => {

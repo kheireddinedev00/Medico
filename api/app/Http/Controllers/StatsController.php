@@ -46,6 +46,30 @@ class StatsController extends Controller
     }
 
     /**
+     * Just the queue count, for the badge on the navigation.
+     *
+     * The sidebar needs one integer and used to call `index()` for it — which, for an
+     * administrator, counted every visit, grouped the audit log, built a fourteen-day
+     * trend and totalled each doctor's workload, then threw all of it away except one
+     * number. On every page change.
+     *
+     * Two queries instead, and scoped the same way the queue is: a doctor is told how many
+     * are waiting for *them*, everyone else how many are in the room.
+     */
+    public function waiting(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $queue = WaitingRoomEntry::whereIn('status', ['waiting', 'in_consultation'])
+            ->when($user->role === User::ROLE_DOCTOR, fn ($q) => $q->where('doctor_id', $user->id));
+
+        return response()->json([
+            'waiting' => (clone $queue)->where('status', 'waiting')->count(),
+            'in_consultation' => (clone $queue)->where('status', 'in_consultation')->count(),
+        ]);
+    }
+
+    /**
      * The doctor's own workload. Nobody else's.
      *
      * Scoped to `doctor_id` throughout for the same reason the queue is: in a clinic with

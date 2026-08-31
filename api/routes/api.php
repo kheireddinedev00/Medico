@@ -165,6 +165,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/stats', [StatsController::class, 'index'])
         ->middleware('role:doctor,nurse,admin');
 
+    // Just the queue count, for the badge on the navigation. Its own route because the
+    // sidebar asks on every page change, and the full dashboard is far too much to build
+    // for one integer.
+    Route::get('/stats/waiting', [StatsController::class, 'waiting'])
+        ->middleware('role:doctor,nurse,admin');
+
     // Doctors available to take patients, for the nurse's assignment control.
     Route::get('/doctors', [StaffController::class, 'doctors'])
         ->middleware('role:nurse,doctor,admin');

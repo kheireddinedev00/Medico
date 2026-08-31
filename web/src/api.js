@@ -212,6 +212,9 @@ export const api = {
 
   // Dashboard figures. One route, scoped to the caller's role inside the controller.
   stats: () => get('/stats'),
+  // Just the queue count, for the badge. Two counts rather than the whole dashboard,
+  // which the sidebar was rebuilding on every page change to read one integer.
+  waitingCount: () => get('/stats/waiting'),
 
   // --- the assistant's reference library ---
   // The curated guidelines come back marked `removable: false`. That flag is a hint for
