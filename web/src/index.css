@@ -1229,7 +1229,15 @@ button:hover, .glass:hover, .logout-btn:hover {
   .stat-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
-@container page (min-width: 1040px) {
+/*
+ * Three columns from 900px of container width.
+ *
+ * 1040 was too high by about thirty pixels: a 1341px window with the sidebar expanded
+ * leaves the page 1009px, so the grid fell to two columns and the third panel spanned the
+ * row beneath the others. These are bar lists and short record rows — they read fine at a
+ * third of 900px, and staying beside each other matters more than the extra width.
+ */
+@container page (min-width: 900px) {
   .dash-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
@@ -1238,7 +1246,7 @@ button:hover, .glass:hover, .logout-btn:hover {
  * gap beside it. Three panels in two columns is 2 + 1, and the orphan looked like a
  * mistake — which is exactly what was reported.
  */
-@container page (min-width: 560px) and (max-width: 1039px) {
+@container page (min-width: 560px) and (max-width: 899px) {
   .dash-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 
