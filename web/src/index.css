@@ -16,14 +16,29 @@
  */
 
 :root {
-  --bg: #020617;
-  --bg-deep: #010309;
+  /*
+   * An elevation ladder, and it only ever goes up.
+   *
+   * The old palette had this backwards: the page was #020617 and a form control was
+   * #010309 — *darker* than the page behind it — so every input, dropdown and dialog read
+   * as a hole punched through the interface rather than a surface resting on it. Anything
+   * nearer the reader is now lighter than what is behind it, which is the only rule that
+   * makes a dark theme legible.
+   *
+   * Nothing here is pure black. On an OLED panel true black next to white text bleeds at
+   * the edges, and an hour of reading vital signs against it is genuinely tiring.
+   */
+  --bg: #050b18;        /* the page */
+  --bg-deep: #0e1728;   /* form controls, sitting above the page */
+  --field-hover: #14203a;
+  --elevated: #111c30;  /* modals — floating over everything, so the lightest of the three */
+  --sunken: rgba(255, 255, 255, .05);   /* recessed blocks, relative to whatever holds them */
   --surface: rgba(255, 255, 255, .045);
   --surface-strong: rgba(255, 255, 255, .075);
   --border: rgba(255, 255, 255, .10);
   --border-strong: rgba(255, 255, 255, .18);
 
-  --text: #ffffff;
+  --text: #f1f5fb;
   --text-dim: #cbd5e1;
   --muted: #94a3b8;
   --faint: #64748b;
@@ -60,7 +75,7 @@
   /* The teal the prototype uses for hovered navigation text. */
   --primary-lit: #5eead4;
   /* What a floating menu paints on, so it never inherits a translucent surface. */
-  --menu-bg: #0b1120;
+  --menu-bg: #131e33;
 
   --radius: 26px;
   --radius-sm: 16px;
@@ -78,7 +93,10 @@
 
 .light {
   --bg: #eef4f9;
-  --bg-deep: #e2ebf3;
+  --bg-deep: #ffffff;
+  --field-hover: #f6fafd;
+  --elevated: #ffffff;
+  --sunken: rgba(15, 23, 42, .04);
   --surface: rgba(255, 255, 255, .78);
   --surface-strong: #ffffff;
   --border: rgba(15, 23, 42, .10);
@@ -526,10 +544,16 @@ input, select, textarea {
   border: 1px solid var(--border-strong);
   background: var(--bg-deep); color: var(--text);
 }
-/* `background-color`, never the shorthand: `background` resets `background-image`,
-   and that is where the select's arrow is drawn. This rule outranks the one that
-   draws it, so the shorthand erased the chevron in light mode entirely. */
-.light input, .light select, .light textarea { background-color: #fff; }
+/*
+ * There is no `.light input { background: #fff }` any more: `--bg-deep` carries the right
+ * colour in both themes. That override used the `background` shorthand, which resets
+ * `background-image` — where the select's chevron is drawn — so it silently erased the
+ * arrow in light mode. One token instead of a per-theme rule removes the trap rather than
+ * working around it.
+ */
+
+/* `select` is left out on purpose: a shorthand here would wipe its arrow the same way. */
+input:hover:not(:focus), textarea:hover:not(:focus) { background: var(--field-hover); }
 input:focus, select:focus, textarea:focus {
   outline: none; border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-soft);
@@ -537,7 +561,6 @@ input:focus, select:focus, textarea:focus {
 input::placeholder, textarea::placeholder { color: var(--faint); }
 textarea { resize: vertical; }
 select option { background: var(--bg-deep); color: var(--text); }
-.light select option { background: #fff; }
 
 label { display: block; font-size: .82rem; font-weight: 600; color: var(--text-dim); }
 label input, label select, label textarea,
@@ -724,11 +747,10 @@ th.right, td.right { text-align: right; }
 .soap-note textarea { font-family: var(--mono); font-size: 13px; line-height: 1.6; }
 
 .block {
-  background: var(--bg-deep); border: 1px solid var(--border);
+  background: var(--sunken); border: 1px solid var(--border);
   border-radius: var(--radius-sm); padding: 11px 13px;
   white-space: pre-wrap; font-family: var(--mono); font-size: .84rem; margin: 0;
 }
-.light .block { background: rgba(15, 23, 42, .04); }
 
 .chart-link { font-size: 1rem; font-weight: 700; color: var(--text); text-decoration: none; }
 .chart-link:hover { color: var(--primary); }
@@ -743,7 +765,7 @@ th.right, td.right { text-align: right; }
 }
 .modal {
   width: min(560px, 100%); max-height: 88vh; display: flex; flex-direction: column;
-  background: var(--bg); border: 1px solid var(--border-strong);
+  background: var(--elevated); border: 1px solid var(--border-strong);
   border-radius: var(--radius); box-shadow: var(--shadow);
 }
 .modal.wide { width: min(980px, 100%); }
@@ -1459,8 +1481,9 @@ select:focus {
   background: var(--bg-deep); color: var(--text);
   font: inherit; font-weight: 500; text-align: left; cursor: pointer;
 }
-.light .filter-trigger { background: #fff; }
-.filter-trigger:hover { border-color: var(--primary); color: var(--text); }
+.filter-trigger:hover {
+  border-color: var(--primary); color: var(--text); background: var(--field-hover);
+}
 .filter.open .filter-trigger {
   border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft);
 }
