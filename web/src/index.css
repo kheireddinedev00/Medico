@@ -1439,14 +1439,16 @@ select:focus {
 .filter.open .filter-trigger .chev { transform: rotate(180deg); }
 
 .filter-menu {
-  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 80;
+  /* Positioned inline from the trigger's rect — see Filter.jsx. Above the modal layer,
+     because it is opened from controls that live inside dialogs. */
+  z-index: 950;
   padding: 6px; border-radius: 18px;
   background-color: var(--menu-bg);
   background-image: var(--glass);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow);
   backdrop-filter: blur(35px) saturate(180%);
-  max-height: 280px; overflow-y: auto;
+  overflow-y: auto;
   animation: sheetIn .16s cubic-bezier(.22, 1, .36, 1) both;
   transform-origin: top;
 }
@@ -1460,11 +1462,10 @@ select:focus {
 .filter-option:hover {
   background: rgba(23, 175, 162, .12); color: var(--primary-lit); border-color: transparent;
 }
+.filter-option.hot:not(.on) { background: rgba(23, 175, 162, .12); color: var(--primary-lit); }
 .filter-option.on { background: var(--primary); color: #fff; font-weight: 600; }
 .filter-option .tick { font-size: .8rem; }
 
-/* Inside a modal the menu has to clear the dialog's own stacking. */
-.modal .filter-menu { z-index: 910; }
 
 /* ---------------------------------------------------------------- login floaters */
 

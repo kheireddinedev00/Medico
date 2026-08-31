@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../api'
+import Filter from '../components/Filter'
 
 /**
  * Registering a patient, and taking their history.
@@ -44,11 +45,16 @@ export function NewPatientForm({ onCreated, onCancel }) {
       </label>
 
       <div className="form-row">
-        <label>Sex
-          <select value={values.sex} onChange={set('sex')}>
-            {['unknown', 'male', 'female', 'other'].map((s) => <option key={s}>{s}</option>)}
-          </select>
-        </label>
+        <div>
+          <label htmlFor="sex">Sex</label>
+          <Filter
+            id="sex"
+            value={values.sex}
+            onChange={(v) => setValues({ ...values, sex: v })}
+            options={['unknown', 'male', 'female', 'other']
+              .map((s) => ({ value: s, label: labelFor(s) }))}
+          />
+        </div>
         <label>Date of birth
           <input type="date" value={values.date_of_birth ?? ''} onChange={set('date_of_birth')} />
         </label>
@@ -142,16 +148,28 @@ export function IntakeForm({ kind, patientId, onSaved, onCancel }) {
       {error && <div className="note bad">{error}</div>}
 
       {spec.fields.map((f, i) => (
-        <label key={f.key}>{f.label}
-          {f.type === 'select' ? (
-            <select value={values[f.key]} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}>
-              {f.options.map((o) => <option key={o}>{o}</option>)}
-            </select>
-          ) : (
+        /*
+          A choice renders as the application's own menu, not the operating system's.
+          The label sits outside rather than wrapping, because `Filter` is a button and a
+          list — wrapping it in a `<label>` would make clicking the label toggle the menu
+          rather than focus it. `htmlFor` does the same job without that side effect.
+        */
+        f.type === 'select' ? (
+          <div key={f.key}>
+            <label htmlFor={`intake-${f.key}`}>{f.label}</label>
+            <Filter
+              id={`intake-${f.key}`}
+              value={values[f.key]}
+              onChange={(v) => setValues({ ...values, [f.key]: v })}
+              options={f.options.map((o) => ({ value: o, label: labelFor(o) }))}
+            />
+          </div>
+        ) : (
+          <label key={f.key}>{f.label}
             <input autoFocus={i === 0} value={values[f.key] ?? ''} placeholder={f.placeholder}
               onChange={(e) => setValues({ ...values, [f.key]: e.target.value })} />
-          )}
-        </label>
+          </label>
+        )
       ))}
 
       <div className="form-actions">
@@ -160,6 +178,19 @@ export function IntakeForm({ kind, patientId, onSaved, onCancel }) {
       </div>
     </form>
   )
+}
+
+/**
+ * How an option is written in a menu.
+ *
+ * `unknown` is the one that matters. Rendered as "Not recorded" it says nobody answered,
+ * which is the honest reading; left as the raw value it looks like a severity the clinician
+ * picked. An unasked question and a recorded answer are different clinical statements —
+ * the same distinction the allergy list itself makes.
+ */
+function labelFor(value) {
+  if (value === 'unknown') return 'Not recorded'
+  return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
 export const intakeTitle = (kind) => FORMS[kind].title
