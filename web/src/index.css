@@ -526,7 +526,10 @@ input, select, textarea {
   border: 1px solid var(--border-strong);
   background: var(--bg-deep); color: var(--text);
 }
-.light input, .light select, .light textarea { background: #fff; }
+/* `background-color`, never the shorthand: `background` resets `background-image`,
+   and that is where the select's arrow is drawn. This rule outranks the one that
+   draws it, so the shorthand erased the chevron in light mode entirely. */
+.light input, .light select, .light textarea { background-color: #fff; }
 input:focus, select:focus, textarea:focus {
   outline: none; border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-soft);
@@ -537,7 +540,8 @@ select option { background: var(--bg-deep); color: var(--text); }
 .light select option { background: #fff; }
 
 label { display: block; font-size: .82rem; font-weight: 600; color: var(--text-dim); }
-label input, label select, label textarea { margin-top: 5px; font-weight: 400; }
+label input, label select, label textarea,
+label > .filter { margin-top: 5px; font-weight: 400; }
 
 .form { display: flex; flex-direction: column; gap: 13px; }
 .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 11px; }
@@ -1006,7 +1010,8 @@ td.right > button:first-child { margin-left: 0; }
 
 /* Labels above their controls line up when every field owns the same vertical rhythm. */
 .filters .field label { line-height: 1.4; }
-.filters .field > input, .filters .field > select { height: 36px; }
+.filters .field > input, .filters .field > select,
+.filters .field > .filter .filter-trigger { height: 36px; }
 .filters > button { height: 36px; }
 
 /* Vitals read as a grid of measurements rather than a paragraph of numbers. */
@@ -1409,8 +1414,8 @@ select {
     linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%);
   background-position:
-    calc(100% - 19px) calc(50% + 2px),
-    calc(100% - 14px) calc(50% + 2px);
+    calc(100% - 21px) calc(50% + 2px),
+    calc(100% - 16px) calc(50% + 2px);
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
 }
@@ -1435,9 +1440,20 @@ select:focus {
  */
 .filter { position: relative; }
 
+/*
+ * A width for the control when it sits in a row rather than under a label.
+ *
+ * The trigger is `width: 100%` of a wrapper that has no width of its own, so in a flex row
+ * it collapses to whatever the current label happens to measure — and then resizes itself
+ * every time a longer option is chosen. `.row` already wraps, so the floor costs nothing
+ * on a narrow screen.
+ */
+.row > .filter { min-width: 200px; max-width: 100%; flex: 1 1 200px; }
+.filter.fixed { flex: 0 0 auto; width: 168px; }
+
 .filter-trigger {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  width: 100%; padding: 8px 14px 8px 13px;
+  width: 100%; padding: 8px 16px 8px 13px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
   background: var(--bg-deep); color: var(--text);
@@ -1448,10 +1464,17 @@ select:focus {
 .filter.open .filter-trigger {
   border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft);
 }
-.filter-trigger .chev {
-  color: var(--muted); font-size: .7rem; flex: none;
-  transition: transform .2s ease;
+/* One line, always. Left to wrap, a long option makes the control twice as tall as the
+   inputs beside it and the vitals grid loses its rhythm. */
+.filter-trigger .filter-value {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.filter-trigger .chev {
+  color: var(--muted); font-size: .72rem; flex: none;
+  line-height: 1;
+  transition: transform .2s ease, color .2s ease;
+}
+.filter-trigger:hover .chev, .filter.open .filter-trigger .chev { color: var(--primary); }
 .filter.open .filter-trigger .chev { transform: rotate(180deg); }
 
 .filter-menu {

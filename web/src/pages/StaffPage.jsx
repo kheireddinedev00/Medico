@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api'
 import Modal from '../components/Modal'
+import Filter from '../components/Filter'
 
 /**
  * Clinic accounts.
@@ -175,6 +176,7 @@ function AccountForm({ user, onSubmit, onCancel }) {
   const [busy, setBusy] = useState(false)
 
   const set = (k) => (e) => setValues({ ...values, [k]: e.target.value })
+  const pick = (k) => (value) => setValues({ ...values, [k]: value })
 
   const submit = async (e) => {
     e.preventDefault()
@@ -201,11 +203,11 @@ function AccountForm({ user, onSubmit, onCancel }) {
         <input type="email" value={values.email} onChange={set('email')} placeholder="name@clinic.test" />
       </label>
       <label>Role
-        <select value={values.role} onChange={set('role')}>
-          <option value="doctor">Doctor</option>
-          <option value="nurse">Nurse</option>
-          <option value="admin">Administrator</option>
-        </select>
+        <Filter value={values.role} onChange={pick('role')} options={[
+          { value: 'doctor', label: 'Doctor' },
+          { value: 'nurse', label: 'Nurse' },
+          { value: 'admin', label: 'Administrator' },
+        ]} />
       </label>
 
       {!editing && (

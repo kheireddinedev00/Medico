@@ -29,6 +29,24 @@ export default function Filter({ id, value, options, onChange, className = '' })
   const trigger = useRef(null)
   const menu = useRef(null)
 
+  /*
+   * The highlighted row, mirrored where a keystroke can read it.
+   *
+   * Enter chooses `options[active]`, and `active` is captured when the component renders.
+   * Two keystrokes inside one batch — arrow then Enter, before React has re-rendered —
+   * and Enter reads the old highlight and picks the row above the one lit up. Real key
+   * events arrive in separate tasks so this is hard to hit by hand, but a control that can
+   * commit a value other than the one it is showing is not one to leave in a clinical form.
+   */
+  const activeRef = useRef(0)
+  const highlight = (next) => {
+    setActive((i) => {
+      const to = typeof next === 'function' ? next(i) : next
+      activeRef.current = to
+      return to
+    })
+  }
+
   const selected = options.find((o) => o.value === value) ?? options[0]
 
   /** Where to draw the menu, in viewport coordinates. */
@@ -80,7 +98,7 @@ export default function Filter({ id, value, options, onChange, className = '' })
 
   // Opening lands on whatever is currently chosen, not on the top of the list.
   useEffect(() => {
-    if (open) setActive(Math.max(0, options.findIndex((o) => o.value === value)))
+    if (open) highlight(Math.max(0, options.findIndex((o) => o.value === value)))
   }, [open, value, options])
 
   const choose = (option) => {
@@ -101,13 +119,13 @@ export default function Filter({ id, value, options, onChange, className = '' })
 
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setActive((i) => (i + 1) % options.length)
+      highlight((i) => (i + 1) % options.length)
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setActive((i) => (i - 1 + options.length) % options.length)
+      highlight((i) => (i - 1 + options.length) % options.length)
     } else if (e.key === 'Enter') {
       e.preventDefault()
-      choose(options[active])
+      choose(options[activeRef.current])
     }
   }
 
@@ -123,7 +141,9 @@ export default function Filter({ id, value, options, onChange, className = '' })
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span>{selected?.label}</span>
+        {/* Titled, because a narrow cell ellipsises it — a native select truncates the
+            same way, and this at least gives the full text back on hover. */}
+        <span className="filter-value" title={selected?.label}>{selected?.label}</span>
         <span className="chev" aria-hidden="true">▾</span>
       </button>
 
@@ -150,7 +170,7 @@ export default function Filter({ id, value, options, onChange, className = '' })
               className={`filter-option${option.value === value ? ' on' : ''}${i === active ? ' hot' : ''}`}
               // Hovering moves the keyboard cursor too, so the two never disagree about
               // which row is about to be chosen.
-              onMouseEnter={() => setActive(i)}
+              onMouseEnter={() => highlight(i)}
               onClick={() => choose(option)}
             >
               <span>{option.label}</span>

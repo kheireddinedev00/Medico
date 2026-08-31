@@ -21,6 +21,18 @@ const VITALS = [
 const PRIORITIES = ['CRITICAL', 'URGENT', 'STANDARD', 'LOW']
 
 /**
+ * How an open visit is named in a list of visits to come back to.
+ *
+ * Two controls offer the same choice — the nurse booking someone in, and the nurse
+ * correcting it afterwards — and they have to read identically, or the same visit looks
+ * like two different ones depending on which control you opened.
+ */
+function resumeLabel(v) {
+  const what = v.working_diagnosis_label || v.chief_complaint || v.id
+  return `Resume: ${what} (${v.status.replace(/_/g, ' ').toLowerCase()})`
+}
+
+/**
  * How a priority is painted. Severity only — never a shape or a colour on its own,
  * because a queue read by someone colour-blind has to work too, and every badge carries
  * its word.
@@ -350,10 +362,14 @@ function AssignedDoctor({ entry, doctors, isNurse, onChanged, onError }) {
   if (editing) {
     return (
       <div className="row" style={{ margin: '8px 0' }}>
-        <select defaultValue={entry.doctor?.id ?? ''} onChange={(ev) => choose(ev.target.value)}>
-          <option value="">Unassigned</option>
-          {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-        </select>
+        <Filter
+          value={String(entry.doctor?.id ?? '')}
+          onChange={choose}
+          options={[
+            { value: '', label: 'Unassigned' },
+            ...doctors.map((d) => ({ value: String(d.id), label: d.name })),
+          ]}
+        />
         <button onClick={() => setEditing(false)}>Cancel</button>
       </div>
     )
@@ -413,15 +429,14 @@ function PatientSearch({ onPicked, onCancel, doctors }) {
         </div>
 
         <label>What are they here about?
-          <select value={choice} onChange={(e) => setChoice(e.target.value)}>
-            <option value="">New problem — start a new visit</option>
-            {visits.map((v) => (
-              <option key={v.id} value={v.id}>
-                Resume: {v.working_diagnosis_label || v.chief_complaint || v.id}
-                {' '}({v.status.replace(/_/g, ' ').toLowerCase()})
-              </option>
-            ))}
-          </select>
+          <Filter
+            value={choice}
+            onChange={setChoice}
+            options={[
+              { value: '', label: 'New problem — start a new visit' },
+              ...visits.map((v) => ({ value: v.id, label: resumeLabel(v) })),
+            ]}
+          />
         </label>
 
         {visits.length === 0 && (
@@ -435,10 +450,14 @@ function PatientSearch({ onPicked, onCancel, doctors }) {
           it is not the default anyone should reach by not noticing the field.
         */}
         <label>Which doctor?
-          <select value={doctorId} onChange={(e) => setDoctorId(e.target.value)}>
-            <option value="">Decide later — nobody sees them yet</option>
-            {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
+          <Filter
+            value={doctorId}
+            onChange={setDoctorId}
+            options={[
+              { value: '', label: 'Decide later — nobody sees them yet' },
+              ...doctors.map((d) => ({ value: String(d.id), label: d.name })),
+            ]}
+          />
         </label>
 
         <div className="form-actions">
@@ -497,15 +516,14 @@ function VisitChoice({ entry, isNurse, onChanged, onError }) {
   if (editing) {
     return (
       <div className="row" style={{ margin: '8px 0' }}>
-        <select defaultValue={entry.visit_id ?? ''} onChange={(e) => choose(e.target.value)}>
-          <option value="">New problem — new visit</option>
-          {(visits ?? []).map((v) => (
-            <option key={v.id} value={v.id}>
-              Resume: {v.working_diagnosis_label || v.chief_complaint || v.id}
-              {' '}({v.status.replace(/_/g, ' ').toLowerCase()})
-            </option>
-          ))}
-        </select>
+        <Filter
+          value={entry.visit_id ?? ''}
+          onChange={choose}
+          options={[
+            { value: '', label: 'New problem — new visit' },
+            ...(visits ?? []).map((v) => ({ value: v.id, label: resumeLabel(v) })),
+          ]}
+        />
         <button onClick={() => setEditing(false)}>Cancel</button>
       </div>
     )
@@ -707,9 +725,11 @@ function PriorityForm({ entry, onSaved, onCancel, onError }) {
       )}
 
       <label>Priority
-        <select value={priority} onChange={(e) => setPriority(e.target.value)}>
-          {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-        </select>
+        <Filter
+          value={priority}
+          onChange={setPriority}
+          options={PRIORITIES.map((p) => ({ value: p, label: p }))}
+        />
       </label>
 
       <label>Why are you overriding it?
@@ -801,24 +821,24 @@ function VitalsForm({ entry, onSaved, onCancel, onError }) {
         ))}
 
         <label>Consciousness
-          <select value={consciousness} onChange={(e) => setConsciousness(e.target.value)}>
-            <option value="">not assessed</option>
-            <option value="alert">alert</option>
-            {/* New confusion scores the same as a reduced conscious level — that is why
-                NEWS2 added the C to AVPU. */}
-            <option value="confusion">new confusion</option>
-            <option value="voice">responds to voice</option>
-            <option value="pain">responds to pain</option>
-            <option value="unresponsive">unresponsive</option>
-          </select>
+          <Filter value={consciousness} onChange={setConsciousness} options={[
+            { value: '', label: 'not assessed' },
+            { value: 'alert', label: 'alert' },
+            /* New confusion scores the same as a reduced conscious level — that is why
+               NEWS2 added the C to AVPU. */
+            { value: 'confusion', label: 'new confusion' },
+            { value: 'voice', label: 'responds to voice' },
+            { value: 'pain', label: 'responds to pain' },
+            { value: 'unresponsive', label: 'unresponsive' },
+          ]} />
         </label>
 
         <label>On oxygen?
-          <select value={onOxygen} onChange={(e) => setOnOxygen(e.target.value)}>
-            <option value="">not recorded</option>
-            <option value="no">no — breathing air</option>
-            <option value="yes">yes</option>
-          </select>
+          <Filter value={onOxygen} onChange={setOnOxygen} options={[
+            { value: '', label: 'not recorded' },
+            { value: 'no', label: 'no — breathing air' },
+            { value: 'yes', label: 'yes' },
+          ]} />
         </label>
       </div>
 
@@ -831,11 +851,11 @@ function VitalsForm({ entry, onSaved, onCancel, onError }) {
         <summary className="small muted">Things that change which thresholds apply</summary>
 
         <label>Pregnant?
-          <select value={pregnant} onChange={(e) => setPregnant(e.target.value)}>
-            <option value="">not asked</option>
-            <option value="no">no</option>
-            <option value="yes">yes</option>
-          </select>
+          <Filter value={pregnant} onChange={setPregnant} options={[
+            { value: '', label: 'not asked' },
+            { value: 'no', label: 'no' },
+            { value: 'yes', label: 'yes' },
+          ]} />
         </label>
         <p className="muted small">
           The scale is not validated in pregnancy. Marking this sends the patient straight

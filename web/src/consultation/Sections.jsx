@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api'
 import { useDraft } from '../useDraft'
 import SoapNote from '../components/SoapNote'
+import Filter from '../components/Filter'
 
 /**
  * The steps of a consultation.
@@ -589,12 +590,16 @@ export function Investigations({ visit, run, busy, can }) {
             placeholder="Test name, e.g. D-dimer"
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             onKeyDown={(e) => e.key === 'Enter' && addOwn()} />
-          <select value={draft.category}
-            onChange={(e) => setDraft({ ...draft, category: e.target.value })}>
-            <option value="other">category…</option>
-            <option value="laboratory">laboratory</option>
-            <option value="radiology">radiology</option>
-          </select>
+          <Filter
+            className="fixed"
+            value={draft.category}
+            onChange={(category) => setDraft({ ...draft, category })}
+            options={[
+              { value: 'other', label: 'category…' },
+              { value: 'laboratory', label: 'laboratory' },
+              { value: 'radiology', label: 'radiology' },
+            ]}
+          />
           <button onClick={addOwn} disabled={!draft.name.trim()}>Add</button>
         </div>
         <p className="muted small">
