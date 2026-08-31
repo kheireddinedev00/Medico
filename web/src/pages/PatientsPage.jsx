@@ -1,15 +1,38 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
 import Modal from '../components/Modal'
 import { NewPatientForm } from '../forms/PatientForms'
 
+/**
+ * Everyone the clinic has on record.
+ *
+ * The search box asks the API, because it matches on fields the list does not show. The
+ * rest of the filtering happens here on the returned page: sex, smoking status and visit
+ * count are all already in hand, and a round trip to narrow a list you are looking at makes
+ * the control feel slower than thinking.
+ *
+ * The counts under the filter bar say what was filtered out rather than silently showing
+ * fewer rows. A list that quietly hides people is a list nobody can trust to be complete.
+ */
+
+const SORTS = {
+  name: { label: 'Name (A–Z)', compare: (a, b) => a.full_name.localeCompare(b.full_name) },
+  id: { label: 'Patient id', compare: (a, b) => a.id.localeCompare(b.id) },
+  visits: { label: 'Most visits', compare: (a, b) => (b.visits_count ?? 0) - (a.visits_count ?? 0) },
+  fewest: { label: 'Fewest visits', compare: (a, b) => (a.visits_count ?? 0) - (b.visits_count ?? 0) },
+}
+
+const BLANK = { sex: '', smoking: '', visits: '', sort: 'name' }
+
 export default function PatientsPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+
   const [patients, setPatients] = useState([])
   const [search, setSearch] = useState('')
+  const [filters, setFilters] = useState(BLANK)
   const [registering, setRegistering] = useState(false)
   const [error, setError] = useState(null)
 
@@ -21,6 +44,27 @@ export default function PatientsPage() {
     const t = setTimeout(refresh, 200)   // debounce the search box
     return () => clearTimeout(t)
   }, [refresh])
+
+  const set = (key) => (e) => setFilters((f) => ({ ...f, [key]: e.target.value }))
+
+  const shown = useMemo(() => {
+    const kept = patients.filter((p) => {
+      if (filters.sex && p.sex !== filters.sex) return false
+      if (filters.smoking && p.smoking_status !== filters.smoking) return false
+
+      const visits = p.visits_count ?? 0
+      if (filters.visits === 'none' && visits !== 0) return false
+      if (filters.visits === 'some' && visits === 0) return false
+      if (filters.visits === 'many' && visits < 3) return false
+
+      return true
+    })
+
+    return [...kept].sort(SORTS[filters.sort].compare)
+  }, [patients, filters])
+
+  const filtering = filters.sex || filters.smoking || filters.visits
+  const hidden = patients.length - shown.length
 
   /**
    * Open a consultation, then navigate to its own URL.
@@ -39,42 +83,120 @@ export default function PatientsPage() {
   return (
     <div className="page">
       <div className="page-head">
-        <h1>Patients</h1>
-        <div className="row">
-          <input className="search" placeholder="Search name or id…" value={search}
-            onChange={(e) => setSearch(e.target.value)} />
-          {user.role !== 'patient' && (
-            <button className="primary" onClick={() => setRegistering(true)}>New patient</button>
-          )}
+        <div>
+          <h1>Patients</h1>
+          <p className="page-lede">Everyone on record, and what the chart knows about them.</p>
         </div>
+        {user.role !== 'patient' && (
+          <button className="primary" onClick={() => setRegistering(true)}>New patient</button>
+        )}
       </div>
 
       {error && <div className="note bad">{error.message}</div>}
 
-      <div className="card">
-        <table>
-          <thead>
-            <tr><th>Id</th><th>Name</th><th>Visits</th><th className="right">Actions</th></tr>
-          </thead>
-          <tbody>
-            {patients.length === 0 && (
-              <tr><td colSpan={4} className="muted">No patients found.</td></tr>
-            )}
-            {patients.map((p) => (
-              <tr key={p.id} className="clickable" onClick={() => navigate(`/patients/${p.id}`)}>
-                <td className="mono">{p.id}</td>
-                <td><strong>{p.full_name}</strong></td>
-                <td>{p.visits_count}</td>
-                <td className="right" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => navigate(`/patients/${p.id}`)}>Profile</button>
-                  {user.role === 'doctor' && (
-                    <button className="primary" onClick={() => consult(p)}>Consult</button>
-                  )}
-                </td>
-              </tr>
+      <div className="filters">
+        <div className="field grow">
+          <label htmlFor="q">Search</label>
+          <input id="q" placeholder="Name or patient id…" value={search}
+            onChange={(e) => setSearch(e.target.value)} />
+        </div>
+
+        <div className="field">
+          <label htmlFor="sex">Sex</label>
+          <select id="sex" value={filters.sex} onChange={set('sex')}>
+            <option value="">Any</option>
+            <option value="female">Female</option>
+            <option value="male">Male</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="smoking">Smoking</label>
+          <select id="smoking" value={filters.smoking} onChange={set('smoking')}>
+            <option value="">Any</option>
+            <option value="never">Never</option>
+            <option value="former">Former</option>
+            <option value="current">Current</option>
+            <option value="unknown">Not recorded</option>
+          </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="visits">Visits</label>
+          <select id="visits" value={filters.visits} onChange={set('visits')}>
+            <option value="">Any</option>
+            <option value="none">Never seen</option>
+            <option value="some">Seen at least once</option>
+            <option value="many">Three or more</option>
+          </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="sort">Sort by</label>
+          <select id="sort" value={filters.sort} onChange={set('sort')}>
+            {Object.entries(SORTS).map(([key, s]) => (
+              <option key={key} value={key}>{s.label}</option>
             ))}
-          </tbody>
-        </table>
+          </select>
+        </div>
+
+        {(filtering || search) && (
+          <button onClick={() => { setFilters(BLANK); setSearch('') }}>Clear</button>
+        )}
+      </div>
+
+      {/* What the filters are doing, said plainly rather than left to be inferred. */}
+      <p className="filter-summary">
+        Showing <strong>{shown.length}</strong> of {patients.length}
+        {search && <> matching “{search}”</>}
+        {hidden > 0 && <> · {hidden} hidden by filters</>}
+      </p>
+
+      <div className="card">
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Id</th><th>Name</th><th>Age</th><th>Sex</th>
+                <th>Smoking</th><th className="right">Visits</th><th className="right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="muted">
+                    {patients.length === 0
+                      ? 'No patients found.'
+                      : 'No patients match these filters.'}
+                  </td>
+                </tr>
+              )}
+
+              {shown.map((p) => (
+                <tr key={p.id} onClick={() => navigate(`/patients/${p.id}`)}
+                  style={{ cursor: 'pointer' }}>
+                  <td className="mono small">{p.id}</td>
+                  <td><strong>{p.full_name}</strong></td>
+                  <td>{p.age ?? <span className="muted">—</span>}</td>
+                  <td className="muted">{p.sex}</td>
+                  <td className="muted small">
+                    {p.smoking_status === 'unknown'
+                      ? <em>not recorded</em>
+                      : p.smoking_status}
+                  </td>
+                  <td className="right">{p.visits_count ?? 0}</td>
+                  <td className="right" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => navigate(`/patients/${p.id}`)}>Profile</button>
+                    {user.role === 'doctor' && (
+                      <button className="primary" onClick={() => consult(p)}>Consult</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {registering && (

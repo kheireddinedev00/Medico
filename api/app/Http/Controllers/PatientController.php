@@ -32,9 +32,20 @@ class PatientController extends Controller
             });
         }
 
-        return response()->json([
-            'patients' => $query->withCount('visits')->paginate(25),
-        ]);
+        // 100 rather than 25: the list is filtered and sorted in the browser, and a filter
+        // that only searches the visible page is a filter that lies. A clinic large enough
+        // to overflow this needs server-side filtering, not a bigger number.
+        $patients = $query->withCount('visits')->paginate(100);
+
+        // Computed, never stored — a stored age is wrong the day after a birthday. The
+        // chart already does this; the list needs it too now that it can be filtered on.
+        $patients->getCollection()->transform(function (Patient $patient) {
+            $patient->age = $patient->date_of_birth?->age ?? $patient->age_years;
+
+            return $patient;
+        });
+
+        return response()->json(['patients' => $patients]);
     }
 
     public function show(Request $request, string $patientId): JsonResponse

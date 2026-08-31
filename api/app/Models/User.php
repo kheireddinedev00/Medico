@@ -69,6 +69,18 @@ class User extends Authenticatable
     }
 
     /**
+     * Visits this clinician performed.
+     *
+     * Only ever populated for doctors — `doctor_id` is stamped when a consultation becomes
+     * a record. Nurses record vitals and manage the queue, neither of which produces a
+     * visit, so this is empty for them rather than meaningless.
+     */
+    public function visits(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Visit::class, 'doctor_id');
+    }
+
+    /**
      * The attributes that should be hidden for serialization.
      *
      * @var list<string>

@@ -4,14 +4,17 @@
  * Real URLs, so the back button works and a consultation can be linked to directly —
  * which matters more than it sounds when you are testing the same visit repeatedly.
  *
- * This is still a harness rather than the interface. `src/api.js` is the part built to
- * outlive it.
+ * `/` is the public landing page whether or not anyone is signed in. A marketing page that
+ * disappears once you have an account is a page you cannot show anyone.
  */
 
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth'
+import { ThemeProvider } from './theme'
 import Layout from './components/Layout'
+import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
+import DashboardPage from './pages/DashboardPage'
 import WaitingRoomPage from './pages/WaitingRoomPage'
 import PatientsPage from './pages/PatientsPage'
 import PatientProfilePage from './pages/PatientProfilePage'
@@ -22,9 +25,11 @@ import ReferencesPage from './pages/ReferencesPage'
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Router />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router />
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 
@@ -32,17 +37,30 @@ function Router() {
   const { user, loading } = useAuth()
 
   if (loading) return <p className="centered muted">Loading…</p>
-  if (!user) return <LoginPage />
+
+  // Signed out: the front door and the login form, and nothing else resolves.
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    )
+  }
 
   // A patient account has one destination and no reason to see a patient list.
-  const home = user.role === 'patient'
-    ? `/patients/${user.patient_id}`
-    : user.role === 'nurse' ? '/waiting-room' : '/patients'
+  const home = user.role === 'patient' ? `/patients/${user.patient_id}` : '/dashboard'
 
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<Navigate to={home} replace />} />
+
       <Route element={<Layout />}>
-        <Route path="/" element={<Navigate to={home} replace />} />
+        <Route path="/dashboard" element={
+          user.role === 'patient' ? <Navigate to={home} replace /> : <DashboardPage />
+        } />
         <Route path="/waiting-room" element={<WaitingRoomPage />} />
         <Route path="/patients" element={<PatientsPage />} />
         <Route path="/patients/:patientId" element={<PatientProfilePage />} />

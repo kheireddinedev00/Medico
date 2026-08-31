@@ -8,6 +8,7 @@ use App\Http\Controllers\PatientIntakeController;
 use App\Http\Controllers\ReferenceDocumentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\StatsController;
 use App\Http\Controllers\WaitingRoomController;
 use App\Engine\EngineClient;
 use Illuminate\Support\Facades\Route;
@@ -144,6 +145,16 @@ Route::middleware('auth:sanctum')->group(function () {
         // Deactivate, never delete: their name is on visits, notes and audit rows.
         Route::delete('/{user}', [StaffController::class, 'deactivate']);
     });
+
+    /*
+     * Dashboard figures, answered differently for each role.
+     *
+     * One route rather than three because the question ("what should I be looking at?")
+     * is the same; the answer is scoped inside the controller, so a doctor cannot read
+     * another doctor's workload by calling the nurse's endpoint.
+     */
+    Route::get('/stats', [StatsController::class, 'index'])
+        ->middleware('role:doctor,nurse,admin');
 
     // Doctors available to take patients, for the nurse's assignment control.
     Route::get('/doctors', [StaffController::class, 'doctors'])

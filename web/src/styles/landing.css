@@ -1,0 +1,189 @@
+/*
+ * The public landing page.
+ *
+ * Every rule is scoped under `.landing`. The prototype's stylesheet used bare `nav`,
+ * `.card` and `.logo` selectors and had to be swapped in and out of the document per route
+ * to stop it colliding with the application chrome. Scoping does the same job without a
+ * runtime mechanism, and without a frame where the page has no CSS at all.
+ *
+ * Tokens come from index.css, so the marketing page and the clinic share one palette — the
+ * teal on the front door is the teal on the queue.
+ */
+
+.landing {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding: 0 clamp(18px, 5vw, 64px);
+}
+
+/*
+ * Lift the content above the backdrop — but never the backdrop itself. `.landing > *`
+ * matches the aurora too, and re-declaring `position: relative` on it dropped a fixed
+ * decoration into the flow, where its blurred blooms painted over everything below the
+ * hero. The page looked empty from the second section down.
+ */
+.landing > *:not(.aurora) { position: relative; z-index: 1; }
+
+/* ------------------------------------------------------------------ nav */
+
+.landing-nav {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  padding: 20px 0;
+  max-width: 1200px; margin: 0 auto;
+}
+
+.landing-links { display: flex; gap: 26px; }
+.landing-links a { color: var(--muted); font-weight: 500; }
+.landing-links a:hover { color: var(--text); text-decoration: none; }
+
+@media (max-width: 720px) { .landing-links { display: none; } }
+
+/* ------------------------------------------------------------------ buttons */
+
+.landing .btn-primary,
+.landing .btn-ghost {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 18px; border-radius: 999px;
+  font-weight: 650; font-size: .9rem;
+  border: 1px solid transparent; cursor: pointer;
+  text-decoration: none;
+}
+.landing .btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: var(--primary-ink);
+  box-shadow: 0 8px 24px rgba(23, 175, 162, .28);
+}
+.landing .btn-primary:hover { filter: brightness(1.08); text-decoration: none; }
+
+.landing .btn-ghost {
+  border-color: var(--border-strong); color: var(--text); background: var(--surface);
+}
+.landing .btn-ghost:hover { border-color: var(--primary); color: var(--primary); text-decoration: none; }
+
+.landing .lg { padding: 12px 24px; font-size: .97rem; }
+
+/* ------------------------------------------------------------------ hero */
+
+.hero {
+  max-width: 1200px; margin: 0 auto;
+  display: grid; grid-template-columns: 1.05fr .95fr; gap: 40px;
+  align-items: center;
+  padding: clamp(36px, 8vh, 90px) 0;
+}
+
+.hero-copy .eyebrow,
+.section-head .eyebrow {
+  display: inline-block;
+  font-size: .72rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--primary);
+  padding: 5px 12px; border-radius: 999px;
+  background: var(--primary-soft); border: 1px solid rgba(23, 175, 162, .26);
+  margin-bottom: 18px;
+}
+
+.hero-copy h1 {
+  font-size: clamp(2.2rem, 5.4vw, 3.9rem);
+  line-height: 1.06; letter-spacing: -.035em; margin: 0 0 18px;
+}
+
+.gradient-text {
+  background: linear-gradient(120deg, var(--text) 12%, var(--primary) 55%, var(--purple) 92%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+
+.hero-copy p {
+  color: var(--muted); font-size: 1.03rem; line-height: 1.7;
+  max-width: 54ch; margin: 0 0 26px;
+}
+
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.hero-visual { position: relative; display: grid; place-items: center; min-height: 340px; }
+.dna-scene { position: relative; z-index: 1; }
+.hero-glow {
+  position: absolute; width: 62%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, rgba(23, 175, 162, .22), transparent 68%);
+  filter: blur(38px);
+}
+
+@media (max-width: 940px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-visual { display: none; }
+}
+
+/* ------------------------------------------------------------------ sections */
+
+.divider {
+  max-width: 1200px; margin: 0 auto; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+}
+
+.band { max-width: 1200px; margin: 0 auto; padding: clamp(46px, 9vh, 92px) 0; }
+
+.section-head { text-align: center; max-width: 680px; margin: 0 auto 44px; }
+.section-head h2 {
+  font-size: clamp(1.6rem, 3.4vw, 2.35rem);
+  letter-spacing: -.03em; margin: 0 0 12px;
+}
+.section-head p { color: var(--muted); margin: 0; line-height: 1.7; }
+
+.glass {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+  transition: transform .18s ease, border-color .18s ease;
+}
+.glass:hover { transform: translateY(-3px); border-color: rgba(23, 175, 162, .34); }
+.glass h3 { font-size: 1.03rem; margin: 0 0 9px; }
+.glass p { color: var(--muted); margin: 0; line-height: 1.65; font-size: .92rem; }
+
+.band-grid,
+.feature-grid {
+  display: grid; gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(275px, 1fr));
+}
+
+.feature-icon {
+  display: grid; place-items: center;
+  width: 42px; height: 42px; border-radius: 12px; margin-bottom: 14px;
+  font-size: 19px;
+  background: linear-gradient(135deg, var(--primary-soft), var(--purple-soft));
+  border: 1px solid var(--border);
+}
+
+/* ------------------------------------------------------------------ trust band */
+
+.trust-grid {
+  display: grid; gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.trust {
+  text-align: center; padding: 26px 18px; border-radius: 18px;
+  background: var(--surface); border: 1px solid var(--border);
+}
+.trust strong {
+  display: block; font-size: 2.3rem; font-weight: 800; letter-spacing: -.04em;
+  background: linear-gradient(120deg, var(--primary), var(--purple));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.trust span { display: block; margin-top: 5px; font-weight: 600; }
+.trust em { display: block; margin-top: 5px; color: var(--faint); font-size: .78rem; font-style: normal; }
+
+/* ------------------------------------------------------------------ footer */
+
+.landing-foot {
+  max-width: 1200px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 22px;
+  flex-wrap: wrap;
+  padding: 30px 0 46px;
+  border-top: 1px solid var(--border);
+}
+.landing-foot p {
+  color: var(--faint); font-size: .82rem; margin: 0; max-width: 46ch; line-height: 1.6;
+}

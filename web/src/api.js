@@ -205,6 +205,9 @@ export const api = {
   // Deliberately separate from upload. Transcribing and interpreting are different acts.
   analyseReport: (reportId) => post(`/reports/${reportId}/analyse`),
 
+  // Dashboard figures. One route, scoped to the caller's role inside the controller.
+  stats: () => get('/stats'),
+
   // --- the assistant's reference library ---
   // The curated guidelines come back marked `removable: false`. That flag is a hint for
   // rendering, never the control: the API has no route that could remove them.

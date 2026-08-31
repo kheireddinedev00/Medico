@@ -1,66 +1,159 @@
-import { NavLink, Outlet } from 'react-router-dom'
-import { useAuth } from '../auth'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { api } from '../api'
+import { useAuth } from '../auth'
+import { useTheme } from '../theme'
 
 /**
- * The shell every page sits in.
+ * The shell every signed-in page sits in.
  *
- * Navigation is filtered by role rather than merely disabled, so a nurse is not shown
- * doors that will refuse them. The API enforces the same rules independently — this is
- * convenience, never the control.
+ * A sidebar rather than a row of tabs, and every destination is in it at all times. The
+ * previous version showed four tabs and hid the rest, which meant a doctor mid-consultation
+ * had no way back to the reference library without going through the queue first. Navigation
+ * that disappears depending on where you are is navigation people stop trusting.
+ *
+ * Links are filtered by role rather than disabled, so nobody is shown a door that will
+ * refuse them. The API enforces the same rules independently — this is convenience, never
+ * the control.
  */
 export default function Layout() {
   const { user, signOut } = useAuth()
+  const { light, toggle } = useTheme()
+  const { pathname } = useLocation()
+
   const [engine, setEngine] = useState(null)
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('medico.sidebar') === 'collapsed')
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [waiting, setWaiting] = useState(null)
 
   useEffect(() => {
     api.engineHealth().then(setEngine).catch(() => setEngine(null))
   }, [])
 
+  /*
+   * How many people are waiting, on the navigation itself.
+   *
+   * The one number worth interrupting someone for. A doctor reading a chart should not have
+   * to open the queue to discover that a CRITICAL patient arrived while they were reading.
+   */
+  const refreshCount = useCallback(() => {
+    if (user.role === 'patient') return
+    api.stats()
+      .then((d) => {
+        const s = d.stats ?? {}
+        setWaiting(user.role === 'doctor' ? s.waiting_for_me : s.waiting ?? s.activity?.waiting_now)
+      })
+      .catch(() => setWaiting(null))
+  }, [user.role])
+
+  useEffect(() => { refreshCount() }, [refreshCount, pathname])
+
+  const toggleCollapse = () => {
+    setCollapsed((was) => {
+      localStorage.setItem('medico.sidebar', was ? 'open' : 'collapsed')
+      return !was
+    })
+  }
+
+  // Closed on navigation, or the drawer stays over the page it just moved to.
+  useEffect(() => { setMobileOpen(false) }, [pathname])
+
   const links = [
-    { to: '/waiting-room', label: 'Waiting room', roles: ['nurse', 'doctor', 'admin'] },
-    { to: '/patients', label: 'Patients', roles: ['nurse', 'doctor', 'admin', 'patient'] },
-    { to: '/in-progress', label: 'In progress', roles: ['doctor', 'admin'] },
-    // Readable by every clinical role: knowing what the assistant reasons from is part
-    // of reading its suggestions honestly.
-    { to: '/references', label: 'References', roles: ['doctor', 'nurse', 'admin'] },
-    { to: '/staff', label: 'Staff', roles: ['admin'] },
+    { to: '/dashboard', label: 'Dashboard', icon: '◧', roles: ['doctor', 'nurse', 'admin'] },
+    { to: '/waiting-room', label: 'Waiting room', icon: '⏱', roles: ['nurse', 'doctor', 'admin'], count: waiting },
+    { to: '/in-progress', label: 'In progress', icon: '◐', roles: ['doctor', 'admin'] },
+    { to: '/patients', label: 'Patients', icon: '☰', roles: ['nurse', 'doctor', 'admin', 'patient'] },
+    { to: '/references', label: 'References', icon: '❐', roles: ['doctor', 'nurse', 'admin'] },
+    { to: '/staff', label: 'Staff', icon: '⚇', roles: ['admin'] },
   ].filter((l) => l.roles.includes(user.role))
 
   return (
     <div className="shell">
-      <header className="topbar">
-        <div className="row">
-          <span className="brand">Respiratory CDSS</span>
-          <nav className="tabs">
-            {links.map((l) => (
-              <NavLink key={l.to} to={l.to} className={({ isActive }) => isActive ? 'on' : ''}>
-                {l.label}
-              </NavLink>
-            ))}
-          </nav>
+      <div className="aurora" aria-hidden="true"><span /><span /><span /></div>
+
+      <aside className={`sidebar${collapsed ? ' collapsed' : ''}${mobileOpen ? ' open' : ''}`}>
+        <div className="brand">
+          <span className="brand-mark">🩺</span>
+          <span className="brand-word">Medico</span>
         </div>
 
-        <div className="row">
-          {/* A doctor should learn the assistant is down here, not by wondering why the
-              differential came back empty. */}
-          <span className={engine ? 'pill ok' : 'pill bad'} title={engine ? `ICD-10: ${engine.icd10_mode}` : 'Start the engine on port 8001'}>
-            {engine ? 'assistant ready' : 'assistant offline'}
-          </span>
-          <span className="muted small">{user.name} · {user.role}</span>
-          <button onClick={signOut}>Sign out</button>
+        <div className="nav-group">Clinic</div>
+
+        {links.map((l) => (
+          <NavLink
+            key={l.to}
+            to={l.to}
+            className={({ isActive }) => `nav-item${isActive ? ' on' : ''}`}
+            title={collapsed ? l.label : undefined}
+          >
+            <span className="nav-icon" aria-hidden="true">{l.icon}</span>
+            <span className="nav-label">{l.label}</span>
+            {/* Only when there is something to say. A badge reading "0" is noise. */}
+            {l.count > 0 && <span className="nav-count">{l.count}</span>}
+          </NavLink>
+        ))}
+
+        <div className="sidebar-foot">
+          <button className="nav-item" style={{ width: '100%' }} onClick={toggleCollapse}>
+            <span className="nav-icon" aria-hidden="true">{collapsed ? '»' : '«'}</span>
+            <span className="nav-label">Collapse</span>
+          </button>
         </div>
-      </header>
+      </aside>
 
-      <main className="content">
-        <Outlet />
-      </main>
+      <div className="main">
+        <header className="topbar">
+          <div className="row">
+            <button className="ghost no-print" onClick={() => setMobileOpen((v) => !v)}
+              aria-label="Menu" style={{ padding: '5px 9px' }}>☰</button>
+            <span className="muted small">{titleFor(pathname)}</span>
+          </div>
 
-      <footer className="disclaimer">
-        Decision support for qualified clinicians. Not a medical device. The physician is
-        responsible for every clinical decision.
-      </footer>
+          <div className="row">
+            {/* A doctor should learn the assistant is down here, not by wondering why the
+                differential came back empty. */}
+            <span
+              className={engine ? 'pill ok' : 'pill bad'}
+              title={engine ? `ICD-10: ${engine.icd10_mode}` : 'Start the engine on port 8001'}
+            >
+              {engine ? 'assistant ready' : 'assistant offline'}
+            </span>
+
+            <button className="ghost" onClick={toggle} aria-label="Toggle theme" title="Light or dark">
+              {light ? '☾' : '☀'}
+            </button>
+
+            <div className="who">
+              <strong>{user.name}</strong>
+              <span className="muted small">{user.role}</span>
+            </div>
+
+            <button onClick={signOut}>Sign out</button>
+          </div>
+        </header>
+
+        <main className="content">
+          <Outlet />
+        </main>
+
+        <footer className="disclaimer">
+          Decision support for qualified clinicians. Not a medical device. The physician is
+          responsible for every clinical decision.
+        </footer>
+      </div>
     </div>
   )
+}
+
+/** A plain name for where you are, for the top bar. */
+function titleFor(pathname) {
+  if (pathname.startsWith('/patients/')) return 'Patient chart'
+  return {
+    '/dashboard': 'Dashboard',
+    '/waiting-room': 'Waiting room',
+    '/in-progress': 'In progress',
+    '/patients': 'Patients',
+    '/references': 'Reference library',
+    '/staff': 'Staff',
+  }[pathname] ?? ''
 }
