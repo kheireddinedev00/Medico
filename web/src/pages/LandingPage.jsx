@@ -5,6 +5,24 @@ import '../styles/landing.css'
 const DnaScene = lazy(() => import('../components/DnaScene'))
 
 /**
+ * The band that scrolls along the bottom.
+ *
+ * Written about this system rather than the prototype's generic list: these are things the
+ * application actually does, so a visitor who reads one is not being told about a feature
+ * that does not exist.
+ */
+const MARQUEE = [
+  '🫁 Respiratory decision support',
+  '🧠 Differentials with citations',
+  '📄 Report reading',
+  '⏱ NEWS2 triage',
+  '💊 Allergy and interaction screening',
+  '📝 SOAP notes from the record',
+  '❐ Curated guideline library',
+  '🔒 Audited, every step',
+]
+
+/**
  * The public front door.
  *
  * Built from the Medico prototype's landing page — the aurora, the gradient headline, the
@@ -154,6 +172,22 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+
+      {/*
+        The scrolling band, from the prototype.
+
+        The list is written twice and the track slides exactly half its width, which is what
+        makes the loop seamless: at the halfway point the second copy sits precisely where
+        the first began, so the reset is invisible. Marked `aria-hidden` — it is a mood, and
+        a screen reader reading fourteen items twice would be worse than silence.
+      */}
+      <div className="marquee" aria-hidden="true">
+        <div className="marquee-track">
+          {[...MARQUEE, ...MARQUEE].map((item, i) => (
+            <span key={i}>{item}</span>
+          ))}
+        </div>
+      </div>
 
       <footer className="landing-foot">
         <div className="brand">

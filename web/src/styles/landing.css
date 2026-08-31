@@ -187,3 +187,48 @@
 .landing-foot p {
   color: var(--faint); font-size: .82rem; margin: 0; max-width: 46ch; line-height: 1.6;
 }
+
+/* ------------------------------------------------------------------ marquee */
+
+/*
+ * The scrolling band above the footer.
+ *
+ * The track holds the list twice and slides exactly −50%, so at the end of a cycle the
+ * second copy sits where the first began and the reset cannot be seen. `width: max-content`
+ * is what lets it be wider than the viewport; `overflow: hidden` on the parent is what
+ * stops that widening the page.
+ */
+.marquee {
+  width: 100%; overflow: hidden; padding: 15px 0; margin-top: 40px;
+  background: var(--glass);
+  border-top: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--glass-border);
+  backdrop-filter: blur(35px) saturate(180%);
+  -webkit-backdrop-filter: blur(35px) saturate(180%);
+  /* The band runs the full width of the page, past the landing's own gutters. */
+  position: relative; left: 50%; transform: translateX(-50%);
+  width: 100vw; max-width: 100vw;
+}
+
+.marquee-track {
+  display: flex; width: max-content; gap: 50px;
+  animation: marqueeMove 30s linear infinite;
+}
+
+.marquee-track span {
+  font-size: 14px; font-weight: 600; letter-spacing: 1px; white-space: nowrap;
+  background: linear-gradient(30deg, var(--purple), var(--primary));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  opacity: .9;
+}
+
+@keyframes marqueeMove {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Still, not missing: the words stay readable, they simply stop travelling. */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
+}
