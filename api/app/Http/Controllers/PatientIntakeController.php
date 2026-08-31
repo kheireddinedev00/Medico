@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Allergy;
 use App\Models\ChronicCondition;
 use App\Models\Patient;
+use App\Models\Report;
+use App\Models\WaitingRoomEntry;
 use App\Models\PatientMedication;
 use App\Support\Auditor;
 use Illuminate\Http\JsonResponse;
@@ -80,6 +82,71 @@ class PatientIntakeController extends Controller
         Auditor::record($request->user()->id, 'patient.updated', $patient, $before, $data, $request->ip());
 
         return response()->json(['patient' => $patient->fresh()]);
+    }
+
+    /**
+     * Remove a patient from the record entirely.
+     *
+     * The most destructive act in the application, and the only one that can erase a
+     * clinical history rather than correct it. The administrator's alone.
+     *
+     * Deleting cascades: allergies, medications, chronic conditions, every visit and
+     * everything decided in those visits, every uploaded report, and every queue row. That
+     * is six tables, so the whole record is written to the audit log *before* anything is
+     * removed — a deletion nobody can reconstruct is a deletion nobody can answer for.
+     *
+     * Refused while the patient is in the building. A row disappearing from under a nurse
+     * mid-consultation is not something the interface should have to cope with, and the
+     * request is almost certainly a mistake.
+     */
+    public function destroy(Request $request, Patient $patient): JsonResponse
+    {
+        $inTheRoom = WaitingRoomEntry::where('patient_id', $patient->id)
+            ->whereIn('status', ['waiting', 'in_consultation'])
+            ->exists();
+
+        abort_if(
+            $inTheRoom,
+            422,
+            'That patient is in the waiting room. Remove them from the queue first — a '
+            .'record cannot be deleted while someone is being seen.',
+        );
+
+        // Loaded before the delete, because after it there is nothing left to describe.
+        $patient->loadCount(['visits', 'allergies', 'medications', 'chronicConditions']);
+
+        $snapshot = [
+            'patient' => $patient->toArray(),
+            'visits' => $patient->visits()->get()->toArray(),
+            'allergies' => $patient->allergies()->get()->toArray(),
+            'medications' => $patient->medications()->get()->toArray(),
+            'chronic_conditions' => $patient->chronicConditions()->get()->toArray(),
+            'reports' => Report::where('patient_id', $patient->id)->get()->toArray(),
+        ];
+
+        Auditor::record(
+            $request->user()->id,
+            'patient.deleted',
+            $patient,
+            $snapshot,
+            null,
+            $request->ip(),
+        );
+
+        $counts = [
+            'visits' => $patient->visits_count,
+            'allergies' => $patient->allergies_count,
+            'medications' => $patient->medications_count,
+            'chronic_conditions' => $patient->chronic_conditions_count,
+            'reports' => count($snapshot['reports']),
+        ];
+
+        $patient->delete();
+
+        return response()->json([
+            'deleted' => $counts,
+            'message' => 'Patient removed. The whole record was written to the audit log first.',
+        ]);
     }
 
     // --- allergies -----------------------------------------------------------------

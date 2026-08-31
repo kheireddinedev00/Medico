@@ -4,6 +4,7 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 import Modal from '../components/Modal'
 import { NewPatientForm } from '../forms/PatientForms'
+import Filter from '../components/Filter'
 
 /**
  * Everyone the clinic has on record.
@@ -45,7 +46,7 @@ export default function PatientsPage() {
     return () => clearTimeout(t)
   }, [refresh])
 
-  const set = (key) => (e) => setFilters((f) => ({ ...f, [key]: e.target.value }))
+  const set = (key) => (value) => setFilters((f) => ({ ...f, [key]: value }))
 
   const shown = useMemo(() => {
     const kept = patients.filter((p) => {
@@ -83,10 +84,7 @@ export default function PatientsPage() {
   return (
     <div className="page">
       <div className="page-head">
-        <div>
-          <h1>Patients</h1>
-          <p className="page-lede">Everyone on record, and what the chart knows about them.</p>
-        </div>
+        <div />
         {user.role !== 'patient' && (
           <button className="primary" onClick={() => setRegistering(true)}>New patient</button>
         )}
@@ -103,42 +101,41 @@ export default function PatientsPage() {
 
         <div className="field">
           <label htmlFor="sex">Sex</label>
-          <select id="sex" value={filters.sex} onChange={set('sex')}>
-            <option value="">Any</option>
-            <option value="female">Female</option>
-            <option value="male">Male</option>
-            <option value="other">Other</option>
-          </select>
+          <Filter id="sex" value={filters.sex} onChange={set('sex')} options={[
+            { value: '', label: 'Any' },
+            { value: 'female', label: 'Female' },
+            { value: 'male', label: 'Male' },
+            { value: 'other', label: 'Other' },
+          ]} />
         </div>
 
         <div className="field">
           <label htmlFor="smoking">Smoking</label>
-          <select id="smoking" value={filters.smoking} onChange={set('smoking')}>
-            <option value="">Any</option>
-            <option value="never">Never</option>
-            <option value="former">Former</option>
-            <option value="current">Current</option>
-            <option value="unknown">Not recorded</option>
-          </select>
+          <Filter id="smoking" value={filters.smoking} onChange={set('smoking')} options={[
+            { value: '', label: 'Any' },
+            { value: 'never', label: 'Never' },
+            { value: 'former', label: 'Former' },
+            { value: 'current', label: 'Current' },
+            { value: 'unknown', label: 'Not recorded' },
+          ]} />
         </div>
 
         <div className="field">
           <label htmlFor="visits">Visits</label>
-          <select id="visits" value={filters.visits} onChange={set('visits')}>
-            <option value="">Any</option>
-            <option value="none">Never seen</option>
-            <option value="some">Seen at least once</option>
-            <option value="many">Three or more</option>
-          </select>
+          <Filter id="visits" value={filters.visits} onChange={set('visits')} options={[
+            { value: '', label: 'Any' },
+            { value: 'none', label: 'Never seen' },
+            { value: 'some', label: 'Seen at least once' },
+            { value: 'many', label: 'Three or more' },
+          ]} />
         </div>
 
         <div className="field">
           <label htmlFor="sort">Sort by</label>
-          <select id="sort" value={filters.sort} onChange={set('sort')}>
-            {Object.entries(SORTS).map(([key, s]) => (
-              <option key={key} value={key}>{s.label}</option>
-            ))}
-          </select>
+          <Filter
+            id="sort" value={filters.sort} onChange={set('sort')}
+            options={Object.entries(SORTS).map(([value, s]) => ({ value, label: s.label }))}
+          />
         </div>
 
         {(filtering || search) && (

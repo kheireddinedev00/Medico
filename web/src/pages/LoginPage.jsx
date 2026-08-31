@@ -33,6 +33,17 @@ export default function LoginPage() {
     <div className="centered">
       <div className="aurora" aria-hidden="true"><span /><span /><span /></div>
 
+      {/*
+        Drifting clinical glyphs behind the card, from the prototype's landing page.
+        Decoration, and marked as such: they carry nothing, so a screen reader is told to
+        skip them and `prefers-reduced-motion` stops them dead.
+      */}
+      <div className="floaters" aria-hidden="true">
+        {['🫁', '🩺', '💊', '🧬', '🩻', '🌡', '❤', '🔬'].map((glyph, i) => (
+          <span key={i} className={`floater f${i + 1}`}>{glyph}</span>
+        ))}
+      </div>
+
       <form className="card login" onSubmit={submit}>
         <div className="brand" style={{ padding: 0, marginBottom: 14 }}>
           <span className="brand-mark">🩺</span>

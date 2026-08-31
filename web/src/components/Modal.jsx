@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 /**
  * A dialog.
@@ -13,10 +14,25 @@ export default function Modal({ title, children, onClose, wide = false }) {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+
+    // The page behind a dialog does not scroll away underneath it.
+    document.body.classList.add('modal-open')
+
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.classList.remove('modal-open')
+    }
   }, [onClose])
 
-  return (
+  /*
+   * Rendered into `document.body`, not into the page.
+   *
+   * The shell isolates its own stacking context so the top bar can sit above the content.
+   * A dialog rendered inside that context is trapped beneath the bar, which is why the page
+   * heading showed through above the form. A portal puts the dialog outside every layer the
+   * shell owns, where a fixed backdrop belongs.
+   */
+  return createPortal((
     <div className="backdrop" onClick={onClose}>
       <div
         className={`modal ${wide ? 'wide' : ''}`}
@@ -32,5 +48,5 @@ export default function Modal({ title, children, onClose, wide = false }) {
         <div className="modal-body">{children}</div>
       </div>
     </div>
-  )
+  ), document.body)
 }

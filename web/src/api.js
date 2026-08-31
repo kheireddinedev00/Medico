@@ -89,6 +89,9 @@ export const api = {
   // missed here is one the safety screen will never get to withhold a drug for.
   createPatient: (body) => post('/patients', body),
   updatePatient: (id, body) => request('PATCH', `/patients/${id}`, body),
+  // Administrator only, and the only call that erases a clinical history rather than
+  // correcting it. The whole record is audited server-side before anything is removed.
+  deletePatient: (id) => del(`/patients/${id}`),
   addAllergy: (id, body) => post(`/patients/${id}/allergies`, body),
   removeAllergy: (id, allergyId) => del(`/patients/${id}/allergies/${allergyId}`),
   addMedication: (id, body) => post(`/patients/${id}/medications`, body),

@@ -203,6 +203,8 @@ export default function ConsultationPage() {
 
   return (
     <div className="consultation">
+      <div className="aurora" aria-hidden="true"><span /><span /><span /></div>
+
       <aside className="side">
         <div>
           <h2>

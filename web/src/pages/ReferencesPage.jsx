@@ -44,7 +44,7 @@ export default function ReferencesPage() {
   return (
     <div className="page">
       <div className="page-head">
-        <h1>Reference library</h1>
+        <div />
         {canEdit && (
           <button className="primary" onClick={() => setModal({ kind: 'add' })}>
             Add a document

@@ -47,7 +47,7 @@ export default function StaffPage() {
   return (
     <div className="page">
       <div className="page-head">
-        <h1>Staff</h1>
+        <div />
         <button className="primary" onClick={() => setModal({ kind: 'create' })}>
           New account
         </button>

@@ -5,6 +5,7 @@ import { useAuth } from '../auth'
 import Modal from '../components/Modal'
 import { IntakeForm, intakeTitle } from '../forms/PatientForms'
 import SoapNote from '../components/SoapNote'
+import Filter from '../components/Filter'
 
 /**
  * The patient's chart.
@@ -23,11 +24,16 @@ export default function PatientProfilePage() {
   const [adding, setAdding] = useState(null)
   const [deleting, setDeleting] = useState(null)
   const [viewingNote, setViewingNote] = useState(null)
+  const [deletingPatient, setDeletingPatient] = useState(false)
+  const [editingSmoking, setEditingSmoking] = useState(false)
   const [error, setError] = useState(null)
 
   // Deleting a visit cuts against the append-only grain of the rest of the record, so it is
   // the doctor's or the admin's, and it asks first.
   const canDelete = user.role === 'doctor' || user.role === 'admin'
+  // Deleting the *patient* is a larger act than deleting one visit — it takes the whole
+  // history with it — so it is the administrator's alone.
+  const canDeletePatient = user.role === 'admin'
 
   const refresh = useCallback(() => {
     api.patient(patientId).then(setChart).catch(setError)
@@ -63,9 +69,16 @@ export default function PatientProfilePage() {
             </span>
           </div>
         </div>
-        {user.role === 'doctor' && (
-          <button className="primary" onClick={consult}>Start consultation</button>
-        )}
+        <div className="row">
+          {user.role === 'doctor' && (
+            <button className="primary" onClick={consult}>Start consultation</button>
+          )}
+          {canDeletePatient && (
+            <button className="danger" onClick={() => setDeletingPatient(true)}>
+              Delete patient
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid2">
@@ -107,6 +120,16 @@ export default function PatientProfilePage() {
                 {!m.active && <span className="pill"> stopped</span>}
               </>
             )}
+          />
+
+          <SmokingCard
+            patient={p}
+            editable={user.role !== 'patient'}
+            editing={editingSmoking}
+            onEdit={() => setEditingSmoking(true)}
+            onCancel={() => setEditingSmoking(false)}
+            onSaved={() => { setEditingSmoking(false); refresh() }}
+            onError={setError}
           />
 
           <ListCard
@@ -216,6 +239,34 @@ export default function PatientProfilePage() {
         </Modal>
       )}
 
+      {deletingPatient && (
+        <Modal title="Delete this patient?" onClose={() => setDeletingPatient(false)}>
+          <p><strong>{p.full_name}</strong> <span className="mono muted">{p.id}</span></p>
+
+          <div className="note bad">
+            This removes the person and everything attached to them: every visit and
+            everything decided in it, every allergy, medication and condition, every
+            uploaded report, and every queue row. It cannot be undone from the interface.
+          </div>
+
+          <p className="muted small">
+            The rest of this record is append-only — a mistaken entry is normally corrected
+            rather than removed. This is for a duplicate or a record created in error, not
+            for tidying up. The whole record is written to the audit log first.
+          </p>
+
+          <div className="form-actions">
+            <button className="danger" onClick={async () => {
+              try {
+                await api.deletePatient(p.id)
+                navigate('/patients')
+              } catch (e) { setError(e); setDeletingPatient(false) }
+            }}>Delete the whole record</button>
+            <button onClick={() => setDeletingPatient(false)}>Keep it</button>
+          </div>
+        </Modal>
+      )}
+
       {deleting && (
         <Modal title="Delete this visit?" onClose={() => setDeleting(null)}>
           <p>
@@ -252,6 +303,116 @@ function visitLabel(visits, visitId) {
   const name = v.working_diagnosis_label || v.chief_complaint
   return name ? <> — {name}</> : null
 }
+
+/**
+ * Smoking status, editable in place.
+ *
+ * Beside allergies and medications because it is the same kind of fact: background the
+ * assistant reasons from, rather than something observed during an encounter. Pack-years
+ * changes what a COPD differential is worth, so it is not cosmetic.
+ *
+ * "Not recorded" is offered as its own option and shown as its own state. Nobody having
+ * asked is a different clinical statement from the patient never having smoked, and
+ * collapsing the two is the same mistake as reading an empty allergy list as "no allergies".
+ */
+function SmokingCard({ patient, editable, editing, onEdit, onCancel, onSaved, onError }) {
+  const [form, setForm] = useState({
+    smoking_status: patient.smoking_status ?? 'unknown',
+    pack_years: patient.pack_years ?? '',
+    quit_year: patient.quit_year ?? '',
+  })
+  const [busy, setBusy] = useState(false)
+
+  const save = async (e) => {
+    e.preventDefault()
+    setBusy(true)
+    try {
+      await api.updatePatient(patient.id, {
+        smoking_status: form.smoking_status,
+        // Cleared for someone who never smoked: recording a quantity of something that
+        // did not happen is worse than recording nothing.
+        pack_years: form.smoking_status === 'never' ? null : (form.pack_years || null),
+        quit_year: form.smoking_status === 'former' ? (form.quit_year || null) : null,
+      })
+      onSaved()
+    } catch (err) {
+      onError(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="card">
+      <div className="card-head">
+        <h2>Smoking</h2>
+        {editable && !editing && <button onClick={onEdit}>Edit</button>}
+      </div>
+
+      {!editing && (
+        <>
+          <div className="row">
+            <span className={`pill ${SMOKING_TONE[patient.smoking_status] ?? ''}`}>
+              {patient.smoking_status === 'unknown'
+                ? 'not recorded'
+                : `${patient.smoking_status} smoker`}
+            </span>
+            {patient.pack_years != null && (
+              <span className="muted small">{patient.pack_years} pack-years</span>
+            )}
+            {patient.quit_year && <span className="muted small">quit {patient.quit_year}</span>}
+          </div>
+
+          {patient.smoking_status === 'unknown' && (
+            <p className="empty small">
+              Nobody has asked. Not the same as never — smoking history changes what a COPD
+              differential is worth.
+            </p>
+          )}
+        </>
+      )}
+
+      {editing && (
+        <form className="form" onSubmit={save}>
+          <label htmlFor="smoking">Status</label>
+          <Filter
+            id="smoking"
+            value={form.smoking_status}
+            onChange={(v) => setForm({ ...form, smoking_status: v })}
+            options={[
+              { value: 'never', label: 'Never smoked' },
+              { value: 'former', label: 'Former smoker' },
+              { value: 'current', label: 'Current smoker' },
+              { value: 'unknown', label: 'Not recorded' },
+            ]}
+          />
+
+          {form.smoking_status !== 'never' && form.smoking_status !== 'unknown' && (
+            <div className="form-row">
+              <label>Pack-years
+                <input value={form.pack_years} inputMode="decimal" placeholder="20"
+                  onChange={(e) => setForm({ ...form, pack_years: e.target.value })} />
+              </label>
+              {form.smoking_status === 'former' && (
+                <label>Year quit
+                  <input value={form.quit_year} inputMode="numeric" placeholder="2019"
+                    onChange={(e) => setForm({ ...form, quit_year: e.target.value })} />
+                </label>
+              )}
+            </div>
+          )}
+
+          <div className="form-actions">
+            <button className="primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+            <button type="button" onClick={onCancel} disabled={busy}>Cancel</button>
+          </div>
+        </form>
+      )}
+    </div>
+  )
+}
+
+const SMOKING_TONE = { current: 'bad', former: 'warn', never: 'ok' }
 
 function ListCard({ title, items, empty, render, onAdd, onRemove, extra }) {
   return (

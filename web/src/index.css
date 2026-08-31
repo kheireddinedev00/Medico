@@ -156,18 +156,35 @@ h3 { font-size: .95rem; margin: 0; }
   .aurora span { animation: none; }
 }
 .aurora span:nth-child(1) {
-  width: 46vw; height: 46vw; left: -10vw; top: -12vw;
-  background: radial-gradient(circle, rgba(23, 175, 162, .40), transparent 70%);
+  width: 50vw; height: 50vw; left: -12vw; top: -14vw;
+  background: radial-gradient(circle, rgba(23, 175, 162, .72), transparent 68%);
 }
 .aurora span:nth-child(2) {
-  width: 40vw; height: 40vw; right: -8vw; top: 10vh;
-  background: radial-gradient(circle, rgba(139, 92, 246, .32), transparent 70%);
+  width: 44vw; height: 44vw; right: -10vw; top: 6vh;
+  background: radial-gradient(circle, rgba(139, 92, 246, .62), transparent 68%);
 }
 .aurora span:nth-child(3) {
-  width: 38vw; height: 38vw; left: 25vw; bottom: -16vw;
-  background: radial-gradient(circle, rgba(37, 99, 235, .26), transparent 70%);
+  width: 42vw; height: 42vw; left: 22vw; bottom: -18vw;
+  background: radial-gradient(circle, rgba(37, 99, 235, .52), transparent 68%);
 }
-.light .aurora span { opacity: .32; }
+
+/*
+ * Light mode gets its own, not a dimmed copy.
+ *
+ * The dark blooms are saturated colour on near-black, which over a pale background turns
+ * to grey haze. These are lighter and more transparent, so the page keeps its colour
+ * without the panels sitting on mud.
+ */
+.light .aurora span { opacity: .55; filter: blur(80px); }
+.light .aurora span:nth-child(1) {
+  background: radial-gradient(circle, rgba(45, 212, 191, .55), transparent 70%);
+}
+.light .aurora span:nth-child(2) {
+  background: radial-gradient(circle, rgba(167, 139, 250, .48), transparent 70%);
+}
+.light .aurora span:nth-child(3) {
+  background: radial-gradient(circle, rgba(96, 165, 250, .42), transparent 70%);
+}
 
 /* ---------------------------------------------------------------- app shell */
 
@@ -250,16 +267,16 @@ h3 { font-size: .95rem; margin: 0; }
 
 .brand {
   display: flex; align-items: center; gap: 11px;
-  font-weight: 700; font-size: 1.4rem; letter-spacing: -.02em;
-  padding: 2px 6px 26px;
+  font-weight: 700; font-size: 1.85rem; letter-spacing: -.03em;
+  padding: 2px 4px 26px;
   color: var(--text); white-space: nowrap;
 }
 .sidebar.collapsed .brand { justify-content: center; padding-left: 0; padding-right: 0; }
+/* No plate behind it — the glyph is the mark. */
 .brand-mark {
-  width: 38px; height: 38px; border-radius: 13px; flex: none;
-  display: grid; place-items: center; font-size: 19px;
-  background: linear-gradient(135deg, var(--primary), var(--purple));
-  color: #fff;
+  width: 40px; height: 40px; flex: none;
+  display: grid; place-items: center; font-size: 30px;
+  background: none; border: 0;
 }
 
 /* The prototype's proportions: roomy rows, generous radius, a real gap to the icon. */
@@ -417,8 +434,10 @@ h3 { font-size: .95rem; margin: 0; }
 .empty { color: var(--faint); font-style: italic; padding: 14px 0; }
 .centered { display: grid; place-items: center; min-height: 100vh; padding: 20px; }
 
+/* Circular, always. The queue's initials plate and the account's photo are the same
+   shape, so a nurse and a doctor do not appear to be different kinds of person. */
 .avatar {
-  width: 38px; height: 38px; border-radius: 11px; flex: none;
+  width: 38px; height: 38px; border-radius: 50%; flex: none;
   display: grid; place-items: center; font-weight: 700; font-size: .8rem;
   background: linear-gradient(135deg, var(--primary), var(--purple));
   color: #fff;
@@ -645,7 +664,14 @@ th.right, td.right { text-align: right; }
 
 /* ---------------------------------------------------------------- consultation */
 
-.consultation { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+/* Its own root, outside the shell, so it paints its own background — without which the
+   sidebar's backdrop-filter has nothing behind it and the panel composites against black. */
+.consultation {
+  display: flex; min-height: 100vh;
+  position: relative; z-index: 1;
+  background: var(--bg);
+}
+.consultation > .side, .consultation > .panel { position: relative; z-index: 1; }
 
 .side {
   width: 250px; flex: 0 0 250px;
@@ -824,7 +850,7 @@ th.right, td.right { text-align: right; }
   object-fit: cover; border: 2px solid var(--primary);
   background: var(--surface-strong);
 }
-.avatar-img.lg { width: 84px; height: 84px; border-radius: 22px; border-width: 3px; }
+.avatar-img.lg { width: 84px; height: 84px; border-radius: 50%; border-width: 3px; }
 
 .profile-sheet {
   position: absolute; right: 0; top: calc(100% + 12px);
@@ -1306,3 +1332,202 @@ button:hover, .glass:hover, .logout-btn:hover {
 @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 
 @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+/* ---------------------------------------------------------------- scrollbars */
+
+/*
+ * Thin, translucent, and on no track at all — the prototype's.
+ *
+ * The default on Windows is an opaque light gutter, which on a dark glass panel reads as a
+ * white stripe down the edge. Firefox gets `scrollbar-color`; WebKit gets the pseudo
+ * elements, and the track is explicitly transparent rather than left to a default.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, .35) transparent;
+}
+
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-corner { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, .35);
+  border-radius: 6px;
+}
+*::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, .55); }
+
+/* Room so the bar never sits on the labels it is scrolling. */
+.sidebar-nav, .modal-body { margin-right: -6px; padding-right: 6px; }
+
+/* ---------------------------------------------------------------- modals over everything */
+
+/*
+ * A dialog covers the page, including the bar above it.
+ *
+ * The top bar sits at z-index 40 in `.main`'s isolated layer, so a modal rendered inside
+ * the page was painted *under* the page title — the heading showed through the backdrop
+ * above the form. The backdrop is fixed to the viewport and has to outrank every layer the
+ * shell owns, so it is lifted above them all and `.main` is told not to trap it.
+ */
+.backdrop { z-index: 900; }
+.modal { z-index: 901; }
+
+/* The sidebar is a fixed panel at z-index 100; the backdrop must cover that too. */
+.sidebar { z-index: 100; }
+
+/* While a dialog is open the page behind it does not scroll away underneath. */
+body.modal-open { overflow: hidden; }
+
+/* ---------------------------------------------------------------- select controls */
+
+/*
+ * A select with room for its own arrow.
+ *
+ * The native chevron sat hard against the border. The control now draws its own, inset
+ * from the edge, with padding reserved so a long option never runs underneath it.
+ */
+select {
+  appearance: none; -webkit-appearance: none;
+  padding-right: 38px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 19px) calc(50% + 2px),
+    calc(100% - 14px) calc(50% + 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+select:focus {
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--primary) 50%),
+    linear-gradient(135deg, var(--primary) 50%, transparent 50%);
+}
+
+/* ---------------------------------------------------------------- the custom filter */
+
+/*
+ * A dropdown whose options can actually be styled.
+ *
+ * A native `<select>` renders its list with the operating system, so the menu is a grey
+ * Windows popup in the middle of a glass interface and nothing can be done about it. This
+ * is a button and a list of buttons, which is a real menu we own.
+ *
+ * Used where the choice is a filter or a setting. It is deliberately *not* used for the
+ * ICD-10 search or anything with hundreds of entries — a native select is better at those,
+ * and typing to jump is behaviour worth keeping.
+ */
+.filter { position: relative; }
+
+.filter-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 8px 14px 8px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-deep); color: var(--text);
+  font: inherit; font-weight: 500; text-align: left; cursor: pointer;
+}
+.light .filter-trigger { background: #fff; }
+.filter-trigger:hover { border-color: var(--primary); color: var(--text); }
+.filter.open .filter-trigger {
+  border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.filter-trigger .chev {
+  color: var(--muted); font-size: .7rem; flex: none;
+  transition: transform .2s ease;
+}
+.filter.open .filter-trigger .chev { transform: rotate(180deg); }
+
+.filter-menu {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 80;
+  padding: 6px; border-radius: 18px;
+  background-color: var(--menu-bg);
+  background-image: var(--glass);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(35px) saturate(180%);
+  max-height: 280px; overflow-y: auto;
+  animation: sheetIn .16s cubic-bezier(.22, 1, .36, 1) both;
+  transform-origin: top;
+}
+
+.filter-option {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 9px 12px; border-radius: 11px;
+  background: none; border: none; color: var(--text-dim);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.filter-option:hover {
+  background: rgba(23, 175, 162, .12); color: var(--primary-lit); border-color: transparent;
+}
+.filter-option.on { background: var(--primary); color: #fff; font-weight: 600; }
+.filter-option .tick { font-size: .8rem; }
+
+/* Inside a modal the menu has to clear the dialog's own stacking. */
+.modal .filter-menu { z-index: 910; }
+
+/* ---------------------------------------------------------------- login floaters */
+
+/*
+ * Clinical glyphs drifting behind the sign-in card.
+ *
+ * Purely decorative, and behind everything: `pointer-events: none` so they never intercept
+ * a click on the form, and low contrast so they read as texture rather than as content
+ * somebody might try to interact with.
+ */
+.floaters { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+
+.floater {
+  position: absolute; font-size: 30px; opacity: .13;
+  filter: blur(.3px);
+  animation: floatUp 22s linear infinite;
+}
+.light .floater { opacity: .2; }
+
+.floater.f1 { left: 8%;  top: 82%; animation-duration: 26s; animation-delay: 0s; }
+.floater.f2 { left: 21%; top: 92%; animation-duration: 32s; animation-delay: -6s; font-size: 24px; }
+.floater.f3 { left: 34%; top: 88%; animation-duration: 24s; animation-delay: -12s; font-size: 36px; }
+.floater.f4 { left: 48%; top: 95%; animation-duration: 30s; animation-delay: -3s; }
+.floater.f5 { left: 62%; top: 86%; animation-duration: 28s; animation-delay: -18s; font-size: 27px; }
+.floater.f6 { left: 74%; top: 93%; animation-duration: 34s; animation-delay: -9s; font-size: 33px; }
+.floater.f7 { left: 86%; top: 84%; animation-duration: 25s; animation-delay: -21s; }
+.floater.f8 { left: 94%; top: 90%; animation-duration: 29s; animation-delay: -15s; font-size: 22px; }
+
+@keyframes floatUp {
+  from { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10%  { opacity: .13; }
+  90%  { opacity: .13; }
+  to   { transform: translateY(-115vh) rotate(24deg); opacity: 0; }
+}
+
+/* The card sits above them, and paints its own ground so the glyphs never cross the form. */
+.centered .login { position: relative; z-index: 2; }
+
+@media (prefers-reduced-motion: reduce) {
+  .floater { animation: none; opacity: .1; }
+}
+
+/* ---------------------------------------------------------------- row vs listrow */
+
+/*
+ * A row that is also a list row stays a row.
+ *
+ * `.listrow` sets `flex-direction: column` for the stacked entries in the visit list, and
+ * `.row` sets `align-items: center` for horizontal groups. An element carrying both — which
+ * the allergy, medication and condition lists all do — was getting the column direction and
+ * the row's centring, so every entry rendered stacked and centred instead of name-left,
+ * buttons-right. The explicit `.row` wins: it is the one asking for a direction.
+ */
+.listrow.row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.listrow.row > span:first-child { min-width: 0; }
+.listrow.row > .row { flex: none; }
+
+/* Narrow enough that a name and its buttons cannot share a line, they stack — but left
+   aligned, which is the part that was wrong before. */
+@container page (max-width: 460px) {
+  .listrow.row { flex-direction: column; align-items: flex-start; }
+}

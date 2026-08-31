@@ -22,7 +22,6 @@ export default function InProgressPage() {
 
   return (
     <div className="page">
-      <div className="page-head"><h1>In progress</h1></div>
 
       {visits.length === 0 && <div className="card"><p className="empty">No open visits.</p></div>}
 

@@ -6,6 +6,8 @@ import Modal from '../components/Modal'
 import { NewPatientForm } from '../forms/PatientForms'
 import { useDraft } from '../useDraft'
 import Elapsed from '../components/Elapsed'
+import PatientChart from '../components/PatientChart'
+import Filter from '../components/Filter'
 
 const VITALS = [
   ['temperature_c', 'Temp °C', '36.8'],
@@ -108,7 +110,7 @@ export default function WaitingRoomPage() {
   return (
     <div className="page">
       <div className="page-head">
-        <h1>Waiting room</h1>
+        <div />
         <div className="row">
           <OrderToggle order={order} onChange={changeOrder} />
           {isNurse && (
@@ -214,7 +216,14 @@ export default function WaitingRoomPage() {
                 {e.vitals_recorded ? 'Update vitals' : 'Record vitals'}
               </button>
             )}
-            <button onClick={() => navigate(`/patients/${e.patient.id}`)}>Profile</button>
+            {/*
+              Opens the chart here rather than navigating away. A nurse checking an allergy
+              mid-triage should not lose the queue, their scroll position and whatever they
+              had half-typed into a vitals form to do it.
+            */}
+            <button onClick={() => setModal({ kind: 'chart', patient: e.patient })}>
+              Profile
+            </button>
             <button onClick={() => setModal({ kind: 'priority', entry: e })}>
               {e.triage.override ? 'Change priority' : 'Override priority'}
             </button>
@@ -270,6 +279,21 @@ export default function WaitingRoomPage() {
               } catch (e) { setError(e) }
             }}
           />
+        </Modal>
+      )}
+
+      {modal?.kind === 'chart' && (
+        <Modal wide title={modal.patient.full_name} onClose={() => setModal(null)}>
+          <PatientChart patientId={modal.patient.id} />
+
+          <div className="form-actions">
+            {/* The way to the full page is still offered — this is a shortcut, not a
+                replacement for the chart you can edit. */}
+            <button onClick={() => navigate(`/patients/${modal.patient.id}`)}>
+              Open the full chart
+            </button>
+            <button onClick={() => setModal(null)}>Close</button>
+          </div>
         </Modal>
       )}
 

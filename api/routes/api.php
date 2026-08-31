@@ -84,6 +84,13 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     /*
+     * Removing a patient from the record. The administrator's alone, and the only act in
+     * the application that erases a clinical history rather than correcting it.
+     */
+    Route::delete('/patients/{patient}', [PatientIntakeController::class, 'destroy'])
+        ->middleware('role:admin');
+
+    /*
      * The waiting room.
      *
      * The nurse runs the queue: who arrived, what they are here about, and their vitals.
