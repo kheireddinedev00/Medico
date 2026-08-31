@@ -291,9 +291,17 @@ h3 { font-size: .95rem; margin: 0; }
   background: rgba(23, 175, 162, .12); color: var(--primary-lit);
   text-decoration: none; transform: translateX(6px);
 }
+/*
+ * Flat, deliberately.
+ *
+ * The prototype glows the active row. On a 16px-radius pill that glow spreads as a soft
+ * rectangle that does not follow the corners, so it reads as a smudge behind the row rather
+ * than as light coming off it. The solid teal is already the loudest thing in the panel and
+ * does the job on its own.
+ */
 .nav-item.on {
   background: var(--primary); color: #fff; border-color: transparent; font-weight: 600;
-  box-shadow: 0 0 35px rgba(23, 175, 162, .5);
+  box-shadow: none;
 }
 .nav-item.on:hover { transform: none; color: #fff; }
 .nav-item.on .nav-count { background: rgba(255, 255, 255, .22); color: #fff; }
