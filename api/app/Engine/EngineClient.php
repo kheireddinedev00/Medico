@@ -199,7 +199,84 @@ class EngineClient
         ]);
     }
 
+    // --- reference library --------------------------------------------------------
+
+    /** Every document the assistant can retrieve from, curated and physician-added. */
+    public function references(): array
+    {
+        return $this->request('get', '/references');
+    }
+
+    /**
+     * Add one document to the library and embed it.
+     *
+     * Given the long timeout because embedding happens inline: a document reported as
+     * added but not yet retrievable would be a lie the interface has to keep. The
+     * physician waits, and when the call returns the assistant can already cite it.
+     */
+    public function addReference(string $absolutePath, string $filename, array $meta): array
+    {
+        try {
+            $request = Http::timeout($this->extractTimeout)
+                ->withHeaders($this->headers())
+                ->attach('file', file_get_contents($absolutePath), $filename);
+
+            // Only what was actually filled in. Sending `year=` empty would fail the
+            // engine's int parsing, where omitting it means "not stated".
+            foreach (array_filter($meta, fn ($v) => $v !== null && $v !== '') as $key => $value) {
+                $request = $request->attach($key, (string) $value);
+            }
+
+            $response = $request->post($this->baseUrl.'/references');
+        } catch (ConnectionException $e) {
+            throw new EngineUnavailableException(
+                "The clinical engine is not reachable at {$this->baseUrl} ({$e->getMessage()})."
+            );
+        }
+
+        return $this->handleDocument($response, '/references');
+    }
+
+    /** Remove a physician-added document. The engine refuses anything curated. */
+    public function removeReference(string $sourceName): array
+    {
+        try {
+            $response = Http::timeout($this->timeout)
+                ->withHeaders($this->headers())
+                ->acceptJson()
+                ->delete($this->baseUrl.'/references/'.rawurlencode($sourceName));
+        } catch (ConnectionException $e) {
+            throw new EngineUnavailableException(
+                "The clinical engine is not reachable at {$this->baseUrl} ({$e->getMessage()})."
+            );
+        }
+
+        return $this->handleDocument($response, '/references');
+    }
+
     // --- internals --------------------------------------------------------------
+
+    /**
+     * Like `handle`, but a 422 here is about the document, not about us.
+     *
+     * Everywhere else a 422 means this application and the engine's models have drifted —
+     * our bug, hidden from the user. On these routes it means the file was too large, or
+     * unreadable, or already present: things the person who chose the file needs to be
+     * told, in the engine's own words. Same for the 403 that protects the curated library.
+     */
+    private function handleDocument($response, string $path): array
+    {
+        $body = $response->json() ?? [];
+
+        if (in_array($response->status(), [403, 422], true)) {
+            throw new EngineRefusedException(
+                $body['detail'] ?? 'That document could not be added.',
+                $body['error'] ?? 'document_rejected',
+            );
+        }
+
+        return $this->handle($response, $path);
+    }
 
     private function headers(): array
     {

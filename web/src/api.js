@@ -204,4 +204,21 @@ export const api = {
   },
   // Deliberately separate from upload. Transcribing and interpreting are different acts.
   analyseReport: (reportId) => post(`/reports/${reportId}/analyse`),
+
+  // --- the assistant's reference library ---
+  // The curated guidelines come back marked `removable: false`. That flag is a hint for
+  // rendering, never the control: the API has no route that could remove them.
+  references: () => get('/references'),
+  addReference: (file, meta) => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('title', meta.title)
+    // Omitted rather than sent empty — a blank year is not a year, and the engine parses
+    // this field as an integer.
+    for (const key of ['publisher', 'year', 'reference']) {
+      if (meta[key]) form.append(key, meta[key])
+    }
+    return request('POST', '/references', form)
+  },
+  removeReference: (id) => del(`/references/${id}`),
 }

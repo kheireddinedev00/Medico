@@ -11,3 +11,9 @@ data/clinic.db
 # data/references/sources.json so a fresh clone knows what to fetch.
 data/references/*.pdf
 !data/references/WHO_*.pdf
+
+# Documents a physician added through the application. Excluded wholesale rather than by
+# extension: these arrive from a file picker, so nobody reviewed their licence, and a
+# clinic's internal protocol is not ours to publish either. The registry goes with them —
+# it names files a clone would not have.
+data/references/added/

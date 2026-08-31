@@ -33,7 +33,7 @@ import tempfile
 from pathlib import Path
 from typing import Callable, Optional
 
-from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 import config  # noqa: F401  — imported for its load_dotenv() side effect
@@ -51,6 +51,7 @@ from clinical.json_reply import ReplyError
 from clinical.session import ConsultationError, ConsultationSession
 from patient.report import StoredReport
 from patient.visit import Visit
+from rag import added_documents as reference_library
 from report_reader.analyzer import analyse
 from report_reader.extractor import ExtractionError, extract_report
 from report_reader.loader import UnsupportedFileError
@@ -120,6 +121,26 @@ async def _invalid_transition(_request, exc: InvalidTransition):
 async def _consultation_error(_request, exc: ConsultationError):
     return JSONResponse(
         status_code=409, content={"error": "consultation_error", "detail": str(exc)}
+    )
+
+
+@app.exception_handler(reference_library.ProtectedDocument)
+async def _protected_document(_request, exc: reference_library.ProtectedDocument):
+    """403: the curated library is not editable, and never by this route.
+
+    Ahead of the DocumentError handler on purpose — it is a subclass, and FastAPI matches
+    the most specific registered type, but the ordering makes the intent readable.
+    """
+    return JSONResponse(
+        status_code=403, content={"error": "protected_document", "detail": str(exc)}
+    )
+
+
+@app.exception_handler(reference_library.DocumentError)
+async def _document_error(_request, exc: reference_library.DocumentError):
+    """422: the document itself is the problem — unreadable, too large, already there."""
+    return JSONResponse(
+        status_code=422, content={"error": "document_rejected", "detail": str(exc)}
     )
 
 
@@ -701,3 +722,63 @@ def allowed_next_states(request: ChartRequest) -> dict:
         "status": request.chart.visit.status.value,
         "next": sorted(s.value for s in next_states(request.chart.visit.status)),
     }
+
+
+# --------------------------------------------------------------------------------
+# The reference library — what the assistant is allowed to reason from
+# --------------------------------------------------------------------------------
+#
+# Two shelves, and only one of them is writable from here. The curated sources declared in
+# `sources.json` are the corpus this project was built around; a physician can add a
+# document beside them and take their own back off, and nothing on this route can touch
+# the curated ones. `rag/added_documents.py` enforces that against the chunks themselves,
+# so the rule holds even if a caller invents a source name.
+
+
+@app.get("/references", tags=["references"], dependencies=[Depends(require_key)])
+def references_list() -> dict:
+    """Every document the assistant can retrieve from, curated and added alike."""
+    documents = reference_library.list_documents()
+    return {
+        "documents": documents,
+        "chunks": sum(d["chunks"] for d in documents),
+    }
+
+
+@app.post("/references", tags=["references"], dependencies=[Depends(require_key)])
+async def references_add(
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    publisher: Optional[str] = Form(None),
+    year: Optional[int] = Form(None),
+    reference: Optional[str] = Form(None),
+) -> dict:
+    """Add one document to the library and embed it.
+
+    Ingested whole, unlike the curated sources with their declared page ranges. That is
+    the trade for letting someone add a short protocol without asking them to nominate
+    which of its pages count — and why the size limit exists.
+
+    Slow on purpose: embedding runs here rather than in a background worker, because a
+    document that is "added" but not yet retrievable is a lie the interface would have to
+    keep. The caller should expect to wait.
+    """
+    content = await file.read()
+    return reference_library.add_document(
+        filename=file.filename or "document",
+        content=content,
+        title=title,
+        publisher=publisher,
+        year=year,
+        reference=reference,
+    )
+
+
+@app.delete("/references/{source_name}", tags=["references"], dependencies=[Depends(require_key)])
+def references_remove(source_name: str) -> dict:
+    """Remove an added document — its chunks and its file together.
+
+    Refuses anything from the curated library. The check reads the chunks rather than any
+    manifest, so a caller cannot talk its way past it.
+    """
+    return reference_library.remove_document(source_name)

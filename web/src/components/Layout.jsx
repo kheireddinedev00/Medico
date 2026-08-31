@@ -22,6 +22,9 @@ export default function Layout() {
     { to: '/waiting-room', label: 'Waiting room', roles: ['nurse', 'doctor', 'admin'] },
     { to: '/patients', label: 'Patients', roles: ['nurse', 'doctor', 'admin', 'patient'] },
     { to: '/in-progress', label: 'In progress', roles: ['doctor', 'admin'] },
+    // Readable by every clinical role: knowing what the assistant reasons from is part
+    // of reading its suggestions honestly.
+    { to: '/references', label: 'References', roles: ['doctor', 'nurse', 'admin'] },
     { to: '/staff', label: 'Staff', roles: ['admin'] },
   ].filter((l) => l.roles.includes(user.role))
 

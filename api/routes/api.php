@@ -5,6 +5,7 @@ use App\Http\Controllers\ConsultationController;
 use App\Http\Controllers\Icd10Controller;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientIntakeController;
+use App\Http\Controllers\ReferenceDocumentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\WaitingRoomController;
@@ -147,6 +148,26 @@ Route::middleware('auth:sanctum')->group(function () {
     // Doctors available to take patients, for the nurse's assignment control.
     Route::get('/doctors', [StaffController::class, 'doctors'])
         ->middleware('role:nurse,doctor,admin');
+
+    /*
+     * The assistant's reference library.
+     *
+     * Reading it is open to the clinical roles — knowing what the assistant reasons from is
+     * part of reading its suggestions honestly. Adding and removing belong to doctors and
+     * administrators, because an added document becomes citable evidence in a differential.
+     *
+     * The curated guidelines are not reachable from any of these routes: `destroy` binds to
+     * `reference_documents`, which only holds what `store` put there, and the engine refuses
+     * curated documents independently.
+     */
+    Route::middleware('role:doctor,nurse,admin')->group(function () {
+        Route::get('/references', [ReferenceDocumentController::class, 'index']);
+    });
+
+    Route::middleware('role:doctor,admin')->group(function () {
+        Route::post('/references', [ReferenceDocumentController::class, 'store']);
+        Route::delete('/references/{document}', [ReferenceDocumentController::class, 'destroy']);
+    });
 
     // Open visits for one patient, so the nurse can say which one they are back about.
     Route::get('/patients/{patient}/resumable-visits', [WaitingRoomController::class, 'resumableVisits'])
