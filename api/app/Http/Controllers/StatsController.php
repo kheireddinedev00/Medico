@@ -88,6 +88,7 @@ class StatsController extends Controller
                     'priority' => $e->nurse_priority_label ?? $e->suggested_priority_label,
                     'status' => $e->status,
                     'waiting_since' => $e->arrived_at,
+                    'seen_at' => $e->seen_at,
                 ]),
 
             'recent_visits' => (clone $mine)->with('patient:id,full_name')

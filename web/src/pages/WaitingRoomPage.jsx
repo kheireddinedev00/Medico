@@ -5,6 +5,7 @@ import { useAuth } from '../auth'
 import Modal from '../components/Modal'
 import { NewPatientForm } from '../forms/PatientForms'
 import { useDraft } from '../useDraft'
+import Elapsed from '../components/Elapsed'
 
 const VITALS = [
   ['temperature_c', 'Temp °C', '36.8'],
@@ -172,7 +173,9 @@ export default function WaitingRoomPage() {
               {/* Being seen is not the same as gone. The row stays until the doctor
                   releases them, so the queue matches who is actually in the clinic. */}
               {e.status === 'in_consultation' && (
-                <span className="pill ok">with the doctor</span>
+                e.seen_at
+                  ? <Elapsed since={e.seen_at} className="pill ok" label="with the doctor" />
+                  : <span className="pill ok">with the doctor</span>
               )}
               <span className={e.vitals_recorded ? 'pill ok' : 'pill warn'}>
                 {e.vitals_recorded ? 'vitals recorded' : 'vitals pending'}

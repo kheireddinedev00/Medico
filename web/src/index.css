@@ -385,7 +385,12 @@ h3 { font-size: .95rem; margin: 0; }
   box-shadow: var(--shadow);
   transition: transform .35s ease, border-color .35s ease;
 }
+/* Only when cards are stacked in normal flow. Inside a grid the gap does this job, and
+   a sibling margin offsets the second card in a row below the first. */
 .card + .card { margin-top: 14px; }
+.dash-grid > .card + .card,
+.grid2 > .card + .card,
+.stat-grid > .card + .card { margin-top: 0; }
 
 .card-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -1164,3 +1169,140 @@ button:hover, .glass:hover, .logout-btn:hover {
     transition-duration: .01ms !important;
   }
 }
+
+/* ---------------------------------------------------------------- responsiveness */
+
+/*
+ * Grids that answer to their container, not to the window.
+ *
+ * This is the fix for the panel that dropped to the bottom when the sidebar expanded. The
+ * viewport does not change when the sidebar widens — only the space the content has does —
+ * so `@media` queries could not see it, and `auto-fit` recomputed against a width that had
+ * silently shrunk by 160px. A container query measures the thing that actually changed.
+ */
+.content { container-type: inline-size; container-name: page; }
+
+/* Sensible defaults for browsers without container queries, and for the narrowest case. */
+.stat-grid { grid-template-columns: 1fr; }
+.dash-grid, .grid2 { grid-template-columns: 1fr; }
+
+@container page (min-width: 560px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .dash-grid, .grid2 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@container page (min-width: 1000px) {
+  .stat-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+@container page (min-width: 1040px) {
+  .dash-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/*
+ * A lone panel on the last row fills the row rather than sitting in a third of it with a
+ * gap beside it. Three panels in two columns is 2 + 1, and the orphan looked like a
+ * mistake — which is exactly what was reported.
+ */
+@container page (min-width: 560px) and (max-width: 1039px) {
+  .dash-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* The welcome panel gives up its visual before it gives up its words. */
+@container page (max-width: 780px) {
+  .welcome { grid-template-columns: 1fr; padding: 28px; }
+  .orbit-visual { display: none; }
+}
+
+@container page (max-width: 620px) {
+  .filters { flex-direction: column; align-items: stretch; }
+  .filters .field { min-width: 0; }
+}
+
+/*
+ * The bar stacks on its own breakpoint.
+ *
+ * It is a sibling of `.content`, not a child, so the page container query above never
+ * reached it — the account control ended up sitting on top of the page title.
+ */
+@media (max-width: 760px) {
+  .topbar { flex-direction: column; align-items: stretch; gap: 12px; }
+  .topbar .top-actions { width: 100%; justify-content: space-between; padding-top: 0; }
+  .topbar-crumb { flex-wrap: wrap; }
+  .topbar h1 { font-size: 1.45rem; }
+  .topbar-lede { font-size: .84rem; }
+}
+
+/* Below this the account control keeps its face and drops its words. */
+@media (max-width: 480px) {
+  .profile-btn .who { display: none; }
+  .profile-btn { padding: 4px; }
+  .profile-sheet { width: min(264px, calc(100vw - 28px)); }
+}
+
+/*
+ * Below the sidebar's breakpoint the panel becomes a drawer and the page takes the full
+ * width. The gutter shrinks too — 24px of margin on a phone is a tenth of the screen.
+ */
+@media (max-width: 900px) {
+  :root { --gutter: 14px; }
+
+  .sidebar {
+    transform: translateX(calc(-100% - var(--gutter) * 2));
+    transition: transform .3s ease, width .4s ease;
+    z-index: 200;
+  }
+  .sidebar.open { transform: none; box-shadow: 0 30px 90px rgba(0, 0, 0, .5); }
+
+  /* The edge buttons belong to a panel that is off-screen; the drawer has its own way in. */
+  .sidebar:not(.open) .rail-btn { display: none; }
+
+  .main, .shell.collapsed .main { margin-left: 0; }
+  .topbar { padding: 18px var(--gutter) 14px var(--gutter); }
+  .content { padding: 8px var(--gutter) 18px; }
+  .disclaimer { padding: 14px var(--gutter) 22px; }
+
+  .topbar h1 { font-size: 1.5rem; }
+  .welcome { padding: 24px; }
+  .card { padding: 18px; }
+  .stat { padding: 18px; }
+  .stat-value { font-size: 2.1rem; }
+}
+
+@media (max-width: 560px) {
+  .page-head { flex-direction: column; align-items: stretch; }
+  .page-head > .row, .page-head > button { width: 100%; }
+  .modal, .modal.wide { width: 100%; }
+  .backdrop { padding: 10px; }
+  .stat-value { font-size: 1.9rem; }
+  .welcome h1 { font-size: 1.5rem; }
+  /* Tables scroll rather than squeeze columns into unreadable slivers. */
+  .table-scroll { margin: 0 -18px; padding: 0 18px; }
+}
+
+/* The consultation is two panels side by side, and stacks when there is no room for two. */
+@media (max-width: 1000px) {
+  .consultation { flex-direction: column; }
+  .side {
+    width: 100%; flex-basis: auto; height: auto; position: static;
+    border-right: 0; border-bottom: 1px solid var(--glass-border);
+  }
+  .steps { flex-direction: row; flex-wrap: wrap; }
+  .steps button { width: auto; flex: 1 1 160px; }
+  .exits { flex-direction: row; flex-wrap: wrap; margin-top: 12px; }
+  .exits button { flex: 1 1 140px; }
+  .panel { padding: 16px; }
+}
+
+/* ---------------------------------------------------------------- live clock */
+
+/* The dot that marks a running consultation. Paired with a figure that is also text, so
+   the state is never carried by the animation alone. */
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex: none;
+  background: currentColor; display: inline-block; margin-right: 2px;
+  animation: livePulse 1.6s ease-in-out infinite;
+}
+@keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
 import { BarList, Panel, Stat, Trend, prettify, priorityTone } from '../components/Charts'
+import Elapsed from '../components/Elapsed'
 
 /**
  * The first screen after signing in, and a different screen for each role.
@@ -146,7 +147,11 @@ function DoctorDashboard({ stats, user, engine }) {
                   <span className={`pill ${priorityTone({ label: entry.priority }) ?? ''}`}>
                     {entry.priority ?? 'not scored'}
                   </span>
-                  {entry.status === 'in_consultation' && <span className="pill ok">with you</span>}
+                  {entry.status === 'in_consultation' && (
+                    entry.seen_at
+                      ? <Elapsed since={entry.seen_at} className="pill ok" label="with you" />
+                      : <span className="pill ok">with you</span>
+                  )}
                 </div>
               </div>
               <span className="muted small">Waiting since {timeOf(entry.waiting_since)}</span>
@@ -179,8 +184,19 @@ function DoctorDashboard({ stats, user, engine }) {
           ))}
         </Panel>
 
-        <Panel title="What you diagnose most" count={`${stats.patients_seen} patients seen`}>
+        {/*
+          The count says visits, because that is what the bars add up to. It used to say
+          "5 patients seen" beside bars totalling 8, which is two true numbers reading as
+          one wrong one — the same person seen twice is one patient and two diagnoses.
+        */}
+        <Panel
+          title="What you diagnose most"
+          count={`${diagnosisTotal(stats.diagnoses)} of ${stats.patients_seen} patients`}
+        >
           <BarList rows={stats.diagnoses} empty="No diagnoses recorded yet." />
+          <p className="muted small" style={{ marginTop: 10, marginBottom: 0 }}>
+            Counted per visit. A patient seen twice appears once here for each diagnosis.
+          </p>
         </Panel>
       </div>
     </div>
@@ -413,6 +429,10 @@ function AdminDashboard({ stats, user, engine, generatedAt }) {
 /* ------------------------------------------------------------------ helpers */
 
 const firstName = (name = '') => name.replace(/^Dr\.?\s+/i, '').split(' ')[0]
+
+/** What the bars actually add up to, so the heading and the chart agree. */
+const diagnosisTotal = (rows = []) =>
+  rows.reduce((total, row) => total + row.count, 0) + ' diagnoses'
 
 function timeOf(value) {
   if (!value) return 'an unknown time'

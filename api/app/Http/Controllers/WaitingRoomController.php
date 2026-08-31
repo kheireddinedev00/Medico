@@ -154,6 +154,10 @@ class WaitingRoomController extends Controller
             ],
             'status' => $entry->status,
             'arrived_at' => $entry->arrived_at,
+            // When the doctor took them in. The client counts up from this rather than
+            // from when its own page loaded, so the figure survives a refresh and is the
+            // same on every screen looking at the same patient.
+            'seen_at' => $entry->seen_at,
             'waiting_minutes' => $minutes,
             'waiting_label' => $minutes < 60
                 ? "{$minutes} min"
