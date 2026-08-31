@@ -37,6 +37,8 @@ Route::get('/engine/health', fn () => response()->json(EngineClient::fromConfig(
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    // Your own name, title and photo. Not your role — that is an administrator's to set.
+    Route::patch('/me', [AuthController::class, 'updateProfile']);
 
     // The curated code list, searchable, so a physician can code a diagnosis the assistant
     // did not suggest without being able to invent a code.

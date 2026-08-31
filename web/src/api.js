@@ -63,6 +63,8 @@ export const api = {
   login: (email, password) => post('/login', { email, password }),
   logout: () => post('/logout'),
   me: () => get('/me'),
+  // Your own name, title and photo. Never your role — that is an administrator's.
+  updateProfile: (body) => request('PATCH', '/me', body),
 
   // --- reference ---
   // The transition table comes from the engine. A client that hard-codes it will disagree

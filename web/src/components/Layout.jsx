@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
 import { useTheme } from '../theme'
+import ProfileMenu from './ProfileMenu'
 
 /**
  * The shell every signed-in page sits in.
@@ -12,12 +13,16 @@ import { useTheme } from '../theme'
  * had no way back to the reference library without going through the queue first. Navigation
  * that disappears depending on where you are is navigation people stop trusting.
  *
+ * The two round buttons ride the sidebar's right edge, as in the Medico prototype: collapse
+ * above, light-or-dark below. Putting them on the seam is what makes them read as belonging
+ * to the panel they act on rather than floating in the page.
+ *
  * Links are filtered by role rather than disabled, so nobody is shown a door that will
  * refuse them. The API enforces the same rules independently — this is convenience, never
  * the control.
  */
 export default function Layout() {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const { light, toggle } = useTheme()
   const { pathname } = useLocation()
 
@@ -72,6 +77,25 @@ export default function Layout() {
       <div className="aurora" aria-hidden="true"><span /><span /><span /></div>
 
       <aside className={`sidebar${collapsed ? ' collapsed' : ''}${mobileOpen ? ' open' : ''}`}>
+        {/* On the seam, half over each side, exactly as the prototype has them. */}
+        <button
+          className="rail-btn rail-collapse"
+          onClick={toggleCollapse}
+          aria-label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
+          title={collapsed ? 'Expand' : 'Collapse'}
+        >
+          {collapsed ? '›' : '‹'}
+        </button>
+
+        <button
+          className="rail-btn rail-theme"
+          onClick={toggle}
+          aria-label="Switch between light and dark"
+          title={light ? 'Switch to dark' : 'Switch to light'}
+        >
+          <span>{light ? '☀' : '☾'}</span>
+        </button>
+
         <div className="brand">
           <span className="brand-mark">🩺</span>
           <span className="brand-word">Medico</span>
@@ -92,20 +116,13 @@ export default function Layout() {
             {l.count > 0 && <span className="nav-count">{l.count}</span>}
           </NavLink>
         ))}
-
-        <div className="sidebar-foot">
-          <button className="nav-item" style={{ width: '100%' }} onClick={toggleCollapse}>
-            <span className="nav-icon" aria-hidden="true">{collapsed ? '»' : '«'}</span>
-            <span className="nav-label">Collapse</span>
-          </button>
-        </div>
       </aside>
 
       <div className="main">
         <header className="topbar">
           <div className="row">
-            <button className="ghost no-print" onClick={() => setMobileOpen((v) => !v)}
-              aria-label="Menu" style={{ padding: '5px 9px' }}>☰</button>
+            <button className="ghost no-print mobile-menu" onClick={() => setMobileOpen((v) => !v)}
+              aria-label="Menu">☰</button>
             <span className="muted small">{titleFor(pathname)}</span>
           </div>
 
@@ -119,16 +136,7 @@ export default function Layout() {
               {engine ? 'assistant ready' : 'assistant offline'}
             </span>
 
-            <button className="ghost" onClick={toggle} aria-label="Toggle theme" title="Light or dark">
-              {light ? '☾' : '☀'}
-            </button>
-
-            <div className="who">
-              <strong>{user.name}</strong>
-              <span className="muted small">{user.role}</span>
-            </div>
-
-            <button onClick={signOut}>Sign out</button>
+            <ProfileMenu />
           </div>
         </header>
 

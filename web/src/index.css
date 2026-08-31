@@ -96,6 +96,9 @@ html, body, #root { height: 100%; }
 body {
   margin: 0;
   background: var(--bg);
+  /* Light and dark cross-fade rather than snapping. Only the two properties that carry
+     the theme — animating `all` here would drag every layout change through 350ms too. */
+  transition: background-color .35s ease, color .35s ease;
   color: var(--text);
   font-family: var(--font);
   font-size: 14px;
@@ -117,6 +120,20 @@ h3 { font-size: .95rem; margin: 0; }
 .aurora { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
 .aurora span {
   position: absolute; border-radius: 50%; filter: blur(90px); opacity: .5;
+  /* Slow, alternating drift. Long enough that it reads as depth rather than motion —
+     a background that visibly moves behind a table of vital signs is a distraction. */
+  animation: auroraDrift 26s infinite alternate ease-in-out;
+}
+.aurora span:nth-child(2) { animation-name: auroraDrift2; animation-duration: 32s; }
+.aurora span:nth-child(3) { animation-name: auroraDrift3; animation-duration: 28s; }
+
+@keyframes auroraDrift  { from { transform: none; } to { transform: translate(100px, 70px) scale(1.25); } }
+@keyframes auroraDrift2 { from { transform: none; } to { transform: translate(-90px, 70px) scale(1.2); } }
+@keyframes auroraDrift3 { from { transform: none; } to { transform: translate(80px, -80px) scale(1.25); } }
+
+/* Someone who has asked for less motion gets a still backdrop, not a missing one. */
+@media (prefers-reduced-motion: reduce) {
+  .aurora span { animation: none; }
 }
 .aurora span:nth-child(1) {
   width: 46vw; height: 46vw; left: -10vw; top: -12vw;
@@ -155,12 +172,48 @@ h3 { font-size: .95rem; margin: 0; }
   background: var(--surface);
   backdrop-filter: blur(14px);
   position: sticky; top: 0; height: 100vh;
-  transition: width .18s ease, flex-basis .18s ease;
+  /* The prototype's timing. Long enough to read as the panel resizing rather than
+     snapping, short enough not to be waited on. */
+  transition: width .4s ease, flex-basis .4s ease, padding .4s ease;
 }
+
+/*
+ * The two round buttons riding the sidebar's right edge.
+ *
+ * Straight from the prototype, including the half-overhang: they sit on the seam between
+ * the sidebar and the page, which is what makes them read as belonging to the sidebar
+ * rather than floating in the content.
+ */
+.rail-btn {
+  position: absolute; right: -16px;
+  width: 32px; height: 32px; padding: 0;
+  border-radius: 50%; border: 1px solid var(--border-strong);
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: #fff; font-size: 13px; line-height: 1;
+  display: grid; place-items: center; cursor: pointer;
+  box-shadow: 0 0 22px rgba(23, 175, 162, .45);
+  transition: transform .35s ease, box-shadow .35s ease, background .35s ease;
+  z-index: 5;
+}
+.rail-btn:hover {
+  transform: scale(1.12);
+  box-shadow: 0 0 34px rgba(23, 175, 162, .7);
+  color: #fff; border-color: var(--border-strong);
+}
+.rail-collapse { top: 24px; }
+.rail-theme { top: 68px; }
+
+/* The icon turns as the mode changes, so the switch has a direction. */
+.rail-theme span { display: block; transition: transform .5s cubic-bezier(.4, 0, .2, 1); }
+.light .rail-theme span { transform: rotate(180deg); }
+
+/* Dark mode's strong surface is translucent, which is right for panels sitting in the
+   page and wrong for one floating over it. */
+.profile-sheet { background-color: var(--bg); }
+.light .profile-sheet { background-color: #fff; }
 .sidebar.collapsed { width: var(--sidebar-collapsed); flex-basis: var(--sidebar-collapsed); }
 .sidebar.collapsed .nav-label,
-.sidebar.collapsed .brand-word,
-.sidebar.collapsed .sidebar-foot { display: none; }
+.sidebar.collapsed .brand-word { display: none; }
 .sidebar.collapsed .nav-item { justify-content: center; }
 
 .brand {
@@ -183,12 +236,25 @@ h3 { font-size: .95rem; margin: 0; }
   border: 1px solid transparent; text-decoration: none;
   transition: background .12s ease, color .12s ease;
 }
-.nav-item:hover { background: var(--surface-strong); color: var(--text); text-decoration: none; }
-.nav-item.on {
-  background: var(--primary-soft); color: var(--primary);
-  border-color: rgba(23, 175, 162, .28); font-weight: 600;
+.nav-item:hover {
+  background: rgba(23, 175, 162, .12); color: var(--primary-hover);
+  text-decoration: none; transform: translateX(5px);
 }
+/* Solid rather than tinted, with the prototype's glow. The current page should be the
+   loudest thing in the sidebar, not a slightly different shade of the others. */
+.nav-item.on {
+  background: var(--primary); color: #fff; border-color: transparent; font-weight: 600;
+  box-shadow: 0 0 26px rgba(23, 175, 162, .45);
+}
+.nav-item.on:hover { transform: none; color: #fff; }
+.nav-item.on .nav-count { background: rgba(255, 255, 255, .22); color: #fff; }
+/* Collapsed, the slide would push the icon off its centre line. */
+.sidebar.collapsed .nav-item:hover { transform: none; }
 .nav-icon { width: 18px; text-align: center; font-size: 15px; flex: none; }
+/* Clip rather than wrap. Mid-transition the sidebar is narrower than the label, and a
+   wrapping label reflows every row beneath it for the length of the animation. */
+.nav-label { white-space: nowrap; overflow: hidden; }
+.sidebar { overflow-x: hidden; }
 .nav-count {
   margin-left: auto; font-size: .72rem; font-weight: 700;
   padding: 1px 7px; border-radius: 999px;
@@ -215,12 +281,21 @@ h3 { font-size: .95rem; margin: 0; }
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   backdrop-filter: blur(14px);
-  position: sticky; top: 0; z-index: 20;
+  position: sticky; top: 0; z-index: 40;
 }
 .topbar .who { text-align: right; line-height: 1.25; }
 .topbar .who strong { display: block; font-size: .86rem; }
 
-.content { flex: 1; padding: 22px; }
+.content { flex: 1; padding: 22px; position: relative; z-index: 0; }
+
+/*
+ * The top bar and its dropdown own a layer above the page.
+ *
+ * `isolation` is what makes that reliable. Without it the bar's z-index competes with
+ * whatever the page happens to promote — a transformed card, an element mid-animation —
+ * and the profile menu ends up underneath a button it is meant to cover.
+ */
+.main { isolation: isolate; }
 
 .disclaimer {
   padding: 14px 22px 26px;
@@ -247,6 +322,7 @@ h3 { font-size: .95rem; margin: 0; }
   padding: 16px 18px;
   backdrop-filter: blur(10px);
   box-shadow: var(--shadow);
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
 }
 .card + .card { margin-top: 14px; }
 
@@ -413,7 +489,18 @@ th.right, td.right { text-align: right; }
   padding: 15px 17px; border-radius: var(--radius);
   border: 1px solid var(--border); background: var(--surface);
   backdrop-filter: blur(10px);
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
 }
+.stat:hover {
+  transform: translateY(-3px);
+  border-color: rgba(23, 175, 162, .32);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .3);
+}
+.light .stat:hover { box-shadow: 0 14px 30px rgba(15, 23, 42, .12); }
+
+/* Counting up on arrival. Short, and skipped for reduced motion. */
+.stat-value { animation: riseIn .45s ease both; }
+@keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .stat::after {
   content: ""; position: absolute; inset: 0 auto 0 0; width: 3px;
   background: var(--primary); opacity: .8;
@@ -439,7 +526,12 @@ th.right, td.right { text-align: right; }
   grid-column: 1 / -1; height: 6px; border-radius: 999px;
   background: var(--surface-strong); overflow: hidden;
 }
-.barfill { height: 100%; border-radius: 999px; background: var(--primary); }
+.barfill {
+  height: 100%; border-radius: 999px; background: var(--primary);
+  animation: barGrow .6s cubic-bezier(.22, 1, .36, 1) both;
+  transition: width .3s ease;
+}
+@keyframes barGrow { from { transform: scaleX(0); transform-origin: left; } to { transform: none; } }
 .barfill.bad  { background: var(--bad); }
 .barfill.warn { background: var(--warn); }
 .barfill.ok   { background: var(--ok); }
@@ -450,7 +542,12 @@ th.right, td.right { text-align: right; }
    not "what is the exact number on the 9th" — the tooltip carries that. */
 .trend { display: flex; align-items: flex-end; gap: 5px; height: 130px; padding-top: 8px; }
 .trend .col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; height: 100%; }
-.trend .bar { border-radius: 3px 3px 0 0; min-height: 2px; background: var(--primary); }
+.trend .bar {
+  border-radius: 3px 3px 0 0; min-height: 2px; background: var(--primary);
+  animation: columnGrow .5s cubic-bezier(.22, 1, .36, 1) both;
+  transform-origin: bottom;
+}
+@keyframes columnGrow { from { transform: scaleY(0); } to { transform: none; } }
 .trend .bar.alt { background: var(--purple); opacity: .75; }
 .trend-axis { display: flex; gap: 5px; margin-top: 6px; }
 .trend-axis span {
@@ -599,6 +696,21 @@ th.right, td.right { text-align: right; }
 
 .print-only { display: none; }
 
+/*
+ * One place to honour the setting.
+ *
+ * Everything above is decoration: nothing here carries information that is lost when it
+ * stops moving, which is the test for whether an animation may be removed wholesale.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  .nav-item:hover, .card:hover, .stat:hover, .glass:hover { transform: none !important; }
+}
+
 /* ---------------------------------------------------------------- narrow screens */
 
 @media (max-width: 900px) {
@@ -612,3 +724,188 @@ th.right, td.right { text-align: right; }
   .side { width: 100%; flex-basis: auto; height: auto; position: static; }
   .panel { padding: 16px; }
 }
+
+/* ---------------------------------------------------------------- profile menu */
+
+/*
+ * The account control in the top bar, and the sheet it opens.
+ *
+ * The prototype's shape: face, name, role, and a dropdown holding the things that belong
+ * to *you* rather than to the clinic. Keeping "sign out" here rather than as a bare button
+ * on the bar is what stops it being clicked by accident on the way to something else.
+ */
+.profile-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 10px 4px 4px; border-radius: 999px;
+  background: var(--surface-strong); border: 1px solid var(--border);
+  cursor: pointer; transition: border-color .2s ease, transform .2s ease;
+}
+.profile-btn:hover { border-color: var(--primary); transform: translateY(-1px); }
+.profile-btn .who { text-align: left; line-height: 1.2; }
+.profile-btn .who strong { display: block; font-size: .84rem; color: var(--text); }
+.profile-btn .caret { transition: transform .25s ease; color: var(--muted); font-size: .7rem; }
+.profile-btn.open .caret { transform: rotate(180deg); }
+
+.avatar-img {
+  width: 34px; height: 34px; border-radius: 50%; flex: none;
+  object-fit: cover; border: 2px solid var(--primary);
+  background: var(--surface-strong);
+}
+.avatar-img.lg { width: 84px; height: 84px; border-radius: 22px; border-width: 3px; }
+
+.profile-sheet {
+  position: absolute; right: 0; top: calc(100% + 10px);
+  width: 250px; z-index: 60;
+  /* Opaque, and the strong surface rather than the page background — a menu you can read
+     the page through is a menu people misclick. */
+  background: var(--surface-strong); border: 1px solid var(--border-strong);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 6px;
+  transform-origin: top right;
+  animation: sheetIn .18s cubic-bezier(.22, 1, .36, 1) both;
+}
+@keyframes sheetIn {
+  from { opacity: 0; transform: translateY(-6px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+
+.profile-sheet .head {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px; border-bottom: 1px solid var(--border); margin-bottom: 6px;
+}
+.profile-sheet .head div { min-width: 0; }
+.profile-sheet .head strong { display: block; font-size: .88rem; }
+
+.sheet-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 11px; border-radius: var(--radius-sm);
+  background: none; border: none; color: var(--text-dim);
+  font-weight: 500; text-align: left; cursor: pointer;
+}
+.sheet-item:hover { background: var(--surface-strong); color: var(--primary); border-color: transparent; }
+.sheet-item.danger { color: var(--bad); }
+.sheet-item.danger:hover { background: var(--bad-soft); color: var(--bad); }
+
+.avatar-editor { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.avatar-editor .actions { display: flex; flex-direction: column; gap: 7px; }
+
+/* ---------------------------------------------------------------- file inputs */
+
+/*
+ * A file picker that belongs to the rest of the form.
+ *
+ * The browser default renders a grey system button on a dark panel, which in the results
+ * step sat next to five teal controls looking like a rendering fault. The button half is
+ * restyled through ::file-selector-button; the surrounding row gets the same surface and
+ * border as every other input so a row of them lines up.
+ */
+input[type="file"] {
+  padding: 7px 9px; cursor: pointer;
+  background: var(--surface-strong); border: 1px dashed var(--border-strong);
+  color: var(--muted); font-size: .86rem;
+  transition: border-color .2s ease, background .2s ease;
+}
+input[type="file"]:hover { border-color: var(--primary); background: var(--primary-soft); }
+input[type="file"]:focus { border-style: solid; }
+
+input[type="file"]::file-selector-button {
+  font: inherit; font-weight: 600; font-size: .82rem;
+  margin-right: 11px; padding: 6px 13px;
+  border-radius: var(--radius-sm); border: none; cursor: pointer;
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: var(--primary-ink);
+  transition: filter .18s ease;
+}
+input[type="file"]::file-selector-button:hover { filter: brightness(1.1); }
+
+/* ---------------------------------------------------------------- consultation steps */
+
+/*
+ * The step list, aligned as a column.
+ *
+ * Every row is the same three-part grid — icon, label, marker — so the ticks stack in a
+ * straight line down the right edge instead of floating wherever each label happens to
+ * end. Ragged markers make a nine-step workflow look like nine unrelated buttons.
+ */
+.steps button {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: center; gap: 9px;
+  transition: background .15s ease, color .15s ease, transform .15s ease;
+}
+.steps button:hover:not(:disabled) { transform: translateX(3px); }
+.steps button.on:hover { transform: none; }
+
+.step-icon { text-align: center; font-size: .8rem; opacity: .75; }
+.step-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The marker column: fixed width so a tick, a dash and nothing all occupy the same slot. */
+.steps .done,
+.steps .marker {
+  margin-left: 0; width: 16px; text-align: center;
+  font-weight: 700; font-size: .8rem;
+}
+.steps .done { color: var(--ok); }
+.steps .marker { color: var(--faint); }
+
+.steps button.on .done { color: #fff; }
+
+/* The AI badge sits in the label column, not the marker column, or it pushes ticks out. */
+.steps .tag-ai { margin-left: 6px; }
+
+.side .visit-id { font-family: var(--mono); font-size: .74rem; color: var(--faint); }
+.side .badges { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+
+/* ---------------------------------------------------------------- alignment */
+
+/*
+ * Alignment corrections, gathered rather than scattered.
+ *
+ * Most of these are the same mistake in different places: a row of controls of unequal
+ * height, left to find its own baseline. Committing to `align-items` and a single control
+ * height is what makes a page look built rather than assembled.
+ */
+
+/* Buttons in a row are one height, whatever is written on them. */
+.row > button, .form-actions > button, .card-head > button { min-height: 34px; }
+
+/* A page heading and its actions sit on the same line, not on drifting baselines. */
+.page-head { align-items: center; }
+.page-head > div:first-child { min-width: 0; }
+
+/* Cells that hold buttons keep them on one line and hard against the edge they belong to. */
+td .row, td > button + button { margin-left: 6px; }
+td.right { white-space: nowrap; }
+td.right > button:first-child { margin-left: 0; }
+
+/* A list row's trailing controls align to the top of the row, not its vertical middle,
+   so a two-line label does not drag the button down with it. */
+.listrow > .row.space { align-items: flex-start; }
+.listrow > .row.space > .row,
+.listrow > .row.space > .stack { flex: none; }
+
+/* The queue's badge column is a column, so badges do not stagger row to row. */
+.card-head .stack { align-items: flex-end; min-width: 120px; }
+
+/* Labels above their controls line up when every field owns the same vertical rhythm. */
+.filters .field label { line-height: 1.4; }
+.filters .field > input, .filters .field > select { height: 36px; }
+.filters > button { height: 36px; }
+
+/* Vitals read as a grid of measurements rather than a paragraph of numbers. */
+.vitals { row-gap: 6px; }
+.vitals > span { white-space: nowrap; }
+
+/* The consultation panel and its sidebar share one top edge. */
+.panel > section > .page-head:first-child { margin-top: 0; }
+.side > div:first-child { padding-bottom: 4px; }
+
+/* Section numbers in the results step, so the three stages read in order. */
+.panel h2 { display: flex; align-items: center; gap: 8px; }
+
+/* A modal's actions sit right, where the eye leaves the form. */
+.modal-body .form-actions { justify-content: flex-start; }
+
+/* The mobile menu button only exists where the sidebar hides. */
+.mobile-menu { display: none; }
+@media (max-width: 900px) { .mobile-menu { display: inline-flex; } }

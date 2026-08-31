@@ -29,6 +29,13 @@ export function AuthProvider({ children }) {
     return user
   }
 
+  /** Re-read the account after it has been edited, so the change lands everywhere. */
+  const refresh = async () => {
+    const { user } = await api.me()
+    setUser(user)
+    return user
+  }
+
   const signOut = async () => {
     await api.logout().catch(() => {})
     clearToken()
@@ -36,7 +43,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, refresh }}>
       {children}
     </AuthContext.Provider>
   )

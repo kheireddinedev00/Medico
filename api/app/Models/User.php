@@ -26,6 +26,10 @@ class User extends Authenticatable
         'role',
         'patient_id',
         'is_active',
+        // Neither is clinical data — a face to recognise a colleague by, and what to
+        // call them. See the migration for why the photo is a column, not a file.
+        'avatar',
+        'title',
     ];
 
     /**

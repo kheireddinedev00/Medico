@@ -230,23 +230,36 @@ export default function ConsultationPage() {
         </div>
 
         <nav className="steps">
-          {STEPS.map((s) => {
+          {STEPS.map((s, i) => {
             // Greyed, not hidden, on the treatment-only path. Hiding them would leave the
             // doctor wondering where the investigations went; this says they were skipped.
             const skipped = treatmentOnly && ['investigations', 'results'].includes(s.key)
             return (
+              /*
+                Three columns, fixed: number, label, marker. The marker was previously
+                inside a row that followed the label, so a tick sat wherever the text
+                happened to end and nine of them zig-zagged down the panel. Now they
+                stack in a straight line, and the number gives the workflow an order
+                you can see rather than infer.
+              */
               <button
                 key={s.key}
                 className={`${step === s.key ? 'on' : ''} ${skipped ? 'skipped' : ''}`}
                 onClick={() => setStep(s.key)}
                 title={skipped ? 'Skipped — this visit went straight to treatment' : undefined}
               >
-                <span>{s.label}</span>
-                <span className="row" style={{ gap: 4 }}>
-                  {s.ai && <span className="tag tag-ai">AI</span>}
-                  {skipped ? <span className="done muted">—</span>
-                    : s.done?.(visit) && <span className="done">✓</span>}
+                <span className="step-icon" aria-hidden="true">{i + 1}</span>
+
+                <span className="step-label">
+                  {s.label}
+                  {s.ai && <span className="tag-ai">AI</span>}
                 </span>
+
+                {skipped
+                  ? <span className="marker" title="Skipped">—</span>
+                  : s.done?.(visit)
+                    ? <span className="done" title="Recorded">✓</span>
+                    : <span className="marker" aria-hidden="true" />}
               </button>
             )
           })}
