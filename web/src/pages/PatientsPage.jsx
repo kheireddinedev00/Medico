@@ -35,6 +35,7 @@ export default function PatientsPage() {
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState(BLANK)
   const [registering, setRegistering] = useState(false)
+  const [deleting, setDeleting] = useState(null)
   const [error, setError] = useState(null)
 
   const refresh = useCallback(() => {
@@ -188,6 +189,11 @@ export default function PatientsPage() {
                     {user.role === 'doctor' && (
                       <button className="primary" onClick={() => consult(p)}>Consult</button>
                     )}
+                    {/* Asks before it acts. A destructive control one click from a list
+                        row is the one place a misclick costs a whole record. */}
+                    {user.role === 'admin' && (
+                      <button className="danger" onClick={() => setDeleting(p)}>Delete</button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -195,6 +201,41 @@ export default function PatientsPage() {
           </table>
         </div>
       </div>
+
+      {deleting && (
+        <Modal title="Delete this patient?" onClose={() => setDeleting(null)}>
+          <p>
+            <strong>{deleting.full_name}</strong>{' '}
+            <span className="mono muted">{deleting.id}</span>
+            {deleting.visits_count > 0 && (
+              <> · {deleting.visits_count} visit{deleting.visits_count === 1 ? '' : 's'}</>
+            )}
+          </p>
+
+          <div className="note bad">
+            This removes the person and everything attached to them: every visit and
+            everything decided in it, every allergy, medication and condition, every
+            uploaded report, and every queue row. It cannot be undone from the interface.
+          </div>
+
+          <p className="muted small">
+            The rest of this record is append-only — a mistaken entry is normally corrected
+            rather than removed. This is for a duplicate or a record created in error, not
+            for tidying up. The whole record is written to the audit log first.
+          </p>
+
+          <div className="form-actions">
+            <button className="danger" onClick={async () => {
+              try {
+                await api.deletePatient(deleting.id)
+                setDeleting(null)
+                refresh()
+              } catch (e) { setError(e); setDeleting(null) }
+            }}>Delete the whole record</button>
+            <button onClick={() => setDeleting(null)}>Keep it</button>
+          </div>
+        </Modal>
+      )}
 
       {registering && (
         <Modal title="Register a patient" onClose={() => setRegistering(false)}>
