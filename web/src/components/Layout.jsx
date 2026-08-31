@@ -22,7 +22,7 @@ import ProfileMenu from './ProfileMenu'
  * the control.
  */
 export default function Layout() {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const { light, toggle } = useTheme()
   const { pathname } = useLocation()
 
@@ -72,6 +72,8 @@ export default function Layout() {
     { to: '/staff', label: 'Staff', icon: '⚇', roles: ['admin'] },
   ].filter((l) => l.roles.includes(user.role))
 
+  const page = pageFor(pathname)
+
   return (
     <div className={`shell${collapsed ? ' collapsed' : ''}`}>
       <div className="aurora" aria-hidden="true"><span /><span /><span /></div>
@@ -118,17 +120,36 @@ export default function Layout() {
           </NavLink>
         ))}
         </nav>
+
+        {/*
+          Also in the profile menu, and the repetition is deliberate: this is where you
+          look when you are leaving, that is where you look when you are thinking about
+          your account.
+        */}
+        <div className="sidebar-foot">
+          <button className="logout-btn" onClick={signOut} title={collapsed ? 'Sign out' : undefined}>
+            <span className="nav-icon" aria-hidden="true">⏻</span>
+            <span className="nav-label">Sign out</span>
+          </button>
+        </div>
       </aside>
 
       <div className="main">
         <header className="topbar">
-          <div className="row">
-            <button className="ghost no-print mobile-menu" onClick={() => setMobileOpen((v) => !v)}
-              aria-label="Menu">☰</button>
-            <span className="muted small">{titleFor(pathname)}</span>
+          <div>
+            <div className="topbar-crumb">
+              <button className="ghost no-print mobile-menu" onClick={() => setMobileOpen((v) => !v)}
+                aria-label="Menu">☰</button>
+              <span>Medico</span>
+              <span className="sep" aria-hidden="true">›</span>
+              <span className="where">{workspaceFor(user.role)}</span>
+            </div>
+
+            <h1>{page.title}</h1>
+            <p className="topbar-lede">{page.lede}</p>
           </div>
 
-          <div className="row">
+          <div className="top-actions">
             {/* A doctor should learn the assistant is down here, not by wondering why the
                 differential came back empty. */}
             <span
@@ -155,15 +176,51 @@ export default function Layout() {
   )
 }
 
-/** A plain name for where you are, for the top bar. */
-function titleFor(pathname) {
-  if (pathname.startsWith('/patients/')) return 'Patient chart'
+/**
+ * What this page is, said on the page.
+ *
+ * A name and one line about it. The prototype's bar carries the same thing, and it earns
+ * its space: "In progress" means nothing until you know it holds visits parked on a
+ * laboratory, and nobody reads documentation to find that out.
+ */
+function pageFor(pathname) {
+  if (pathname.startsWith('/patients/')) {
+    return { title: 'Patient chart', lede: 'History, visits and reports for one patient.' }
+  }
+
   return {
-    '/dashboard': 'Dashboard',
-    '/waiting-room': 'Waiting room',
-    '/in-progress': 'In progress',
-    '/patients': 'Patients',
-    '/references': 'Reference library',
-    '/staff': 'Staff',
-  }[pathname] ?? ''
+    '/dashboard': {
+      title: 'Dashboard',
+      lede: 'What needs your attention, counted from the record as it stands.',
+    },
+    '/waiting-room': {
+      title: 'Waiting room',
+      lede: 'Who is here, how urgent they are, and which doctor they are waiting for.',
+    },
+    '/in-progress': {
+      title: 'In progress',
+      lede: 'Visits still open — including those parked waiting on a laboratory.',
+    },
+    '/patients': {
+      title: 'Patients',
+      lede: 'Everyone on record, filterable by age, history and how often they have been seen.',
+    },
+    '/references': {
+      title: 'Reference library',
+      lede: 'What the assistant is allowed to reason from, and what your clinic has added.',
+    },
+    '/staff': {
+      title: 'Staff',
+      lede: 'Clinic accounts. Doctors and nurses do not sign themselves up.',
+    },
+  }[pathname] ?? { title: 'Medico', lede: '' }
+}
+
+/** What this role calls the part of the clinic they work in. */
+function workspaceFor(role) {
+  return {
+    doctor: 'Clinical workspace',
+    nurse: 'Triage and intake',
+    admin: 'Administration',
+  }[role] ?? 'Clinic'
 }

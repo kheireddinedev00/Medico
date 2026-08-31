@@ -19,16 +19,18 @@ import { BarList, Panel, Stat, Trend, prettify, priorityTone } from '../componen
 export default function DashboardPage() {
   const { user } = useAuth()
   const [data, setData] = useState(null)
+  const [engine, setEngine] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     api.stats().then(setData).catch(setError)
+    api.engineHealth().then(setEngine).catch(() => setEngine(null))
   }, [])
 
   if (error) return <div className="page"><div className="note bad">{error.message}</div></div>
   if (!data) return <p className="empty">Loading your dashboard…</p>
 
-  const shared = { stats: data.stats, user, generatedAt: data.generated_at }
+  const shared = { stats: data.stats, user, engine, generatedAt: data.generated_at }
 
   if (user.role === 'doctor') return <DoctorDashboard {...shared} />
   if (user.role === 'nurse') return <NurseDashboard {...shared} />
@@ -37,25 +39,78 @@ export default function DashboardPage() {
   return <div className="page"><p className="empty">No dashboard for this account.</p></div>
 }
 
+/**
+ * The opening panel: a greeting, what this screen is for, and the orbiting visual.
+ *
+ * The rings are decoration. The core is not — it reports whether the clinical engine is
+ * reachable, so a doctor learns the assistant is down at a glance rather than by wondering
+ * why a differential came back empty.
+ */
+function Welcome({ eyebrow, greeting, name, lede, actions, engine }) {
+  return (
+    <section className="welcome">
+      <div>
+        <span className="welcome-eyebrow">
+          <span className="pulse" aria-hidden="true" />
+          {eyebrow}
+        </span>
+
+        <h1>{greeting}, <em>{name}</em></h1>
+        <p>{lede}</p>
+
+        <div className="welcome-actions">{actions}</div>
+      </div>
+
+      <div className="orbit-visual" aria-hidden="true">
+        <div className="orbit one" />
+        <div className="orbit two" />
+
+        <div className={`orbit-core${engine ? '' : ' down'}`}>
+          <span className="glyph">{engine ? '♥' : '⚠'}</span>
+          <span>Clinical AI</span>
+          <strong>{engine ? 'Online' : 'Offline'}</strong>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/**
+ * Morning, afternoon or evening, from the clock on the machine.
+ *
+ * The clinic's clock rather than the server's: someone reading this at 7pm should be told
+ * good evening even if the API is hosted three time zones away.
+ */
+function greetingNow() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}
+
 /* ------------------------------------------------------------------ doctor */
 
-function DoctorDashboard({ stats, user }) {
+function DoctorDashboard({ stats, user, engine }) {
   const navigate = useNavigate()
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <h1>Good day, {firstName(user.name)}</h1>
-          <p className="page-lede">
-            Your queue and your open work. Patients assigned to other doctors are not
-            counted here.
-          </p>
-        </div>
-        <button className="primary" onClick={() => navigate('/waiting-room')}>
-          Go to my queue
-        </button>
-      </div>
+      <Welcome
+        eyebrow="AI-assisted clinical workspace"
+        greeting={greetingNow()}
+        name={`Dr. ${firstName(user.name)}`}
+        lede="Your queue and your open work, counted from the record as it stands. Patients
+          assigned to other doctors are not included here."
+        engine={engine}
+        actions={
+          <>
+            <button className="primary" onClick={() => navigate('/waiting-room')}>
+              Go to my queue
+            </button>
+            <button onClick={() => navigate('/in-progress')}>Resume a visit</button>
+          </>
+        }
+      />
 
       <div className="stat-grid">
         <Stat
@@ -134,23 +189,29 @@ function DoctorDashboard({ stats, user }) {
 
 /* ------------------------------------------------------------------- nurse */
 
-function NurseDashboard({ stats }) {
+function NurseDashboard({ stats, user, engine }) {
   const navigate = useNavigate()
 
   const needsAttention = stats.vitals_pending > 0 || stats.unassigned > 0
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <h1>The waiting room</h1>
-          <p className="page-lede">
-            The whole queue, shared by every nurse. Two of these numbers are the ones you
-            can act on directly.
-          </p>
-        </div>
-        <button className="primary" onClick={() => navigate('/waiting-room')}>Open the queue</button>
-      </div>
+      <Welcome
+        eyebrow="Triage and intake"
+        greeting={greetingNow()}
+        name={firstName(user.name)}
+        lede="The whole queue, shared by every nurse. Two of these numbers are the ones you
+          can act on directly: who has not been measured, and who has not been assigned."
+        engine={engine}
+        actions={
+          <>
+            <button className="primary" onClick={() => navigate('/waiting-room')}>
+              Open the queue
+            </button>
+            <button onClick={() => navigate('/patients')}>Register a patient</button>
+          </>
+        }
+      />
 
       {/*
         Said out loud rather than left to be noticed. An unscored patient is not a low
@@ -224,23 +285,24 @@ function NurseDashboard({ stats }) {
 
 /* ------------------------------------------------------------------- admin */
 
-function AdminDashboard({ stats, generatedAt }) {
+function AdminDashboard({ stats, user, engine, generatedAt }) {
   const { people, activity, assistant } = stats
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <h1>Clinic overview</h1>
-          <p className="page-lede">
-            Everything the record can account for. Counted live rather than cached, so these
-            figures cannot disagree with the tables they summarise.
-          </p>
-        </div>
-        <button className="primary no-print" onClick={() => window.print()}>
-          Print this report
-        </button>
-      </div>
+      <Welcome
+        eyebrow="Administration"
+        greeting={greetingNow()}
+        name={firstName(user.name)}
+        lede="Everything the record can account for. Counted live rather than cached, so
+          these figures cannot disagree with the tables they summarise."
+        engine={engine}
+        actions={
+          <button className="primary no-print" onClick={() => window.print()}>
+            Print this report
+          </button>
+        }
+      />
 
       {/* Only on paper, where the screen's context is gone. */}
       <div className="print-only">

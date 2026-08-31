@@ -23,7 +23,7 @@
   --border: rgba(255, 255, 255, .10);
   --border-strong: rgba(255, 255, 255, .18);
 
-  --text: #f1f5f9;
+  --text: #ffffff;
   --text-dim: #cbd5e1;
   --muted: #94a3b8;
   --faint: #64748b;
@@ -57,6 +57,10 @@
   --glass: linear-gradient(145deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .035));
   --glass-strong: linear-gradient(145deg, rgba(255, 255, 255, .15), rgba(255, 255, 255, .045));
   --glass-border: rgba(255, 255, 255, .14);
+  /* The teal the prototype uses for hovered navigation text. */
+  --primary-lit: #5eead4;
+  /* What a floating menu paints on, so it never inherits a translucent surface. */
+  --menu-bg: #0b1120;
 
   --radius: 26px;
   --radius-sm: 16px;
@@ -99,6 +103,8 @@
   --glass: linear-gradient(145deg, rgba(255, 255, 255, .88), rgba(255, 255, 255, .58));
   --glass-strong: linear-gradient(145deg, rgba(255, 255, 255, .95), rgba(255, 255, 255, .70));
   --glass-border: rgba(15, 23, 42, .10);
+  --primary-lit: #0d9488;
+  --menu-bg: #ffffff;
   --shadow: inset 0 1px 1px rgba(255, 255, 255, .6), 0 25px 70px rgba(15, 23, 42, .15);
 }
 
@@ -109,9 +115,10 @@ html, body, #root { height: 100%; }
 body {
   margin: 0;
   background: var(--bg);
-  /* The prototype's .4s cross-fade. Only the two properties that carry the theme —
-     animating `all` would drag every layout change through it too. */
-  transition: background .4s ease, color .4s ease;
+  /* Slow enough to watch the palette turn over rather than blink. Only the two
+     properties that carry the theme — animating `all` would drag every layout change
+     through it too. */
+  transition: background .9s ease, color .9s ease;
   color: var(--text);
   font-family: var(--font);
   font-size: 14px;
@@ -264,10 +271,9 @@ h3 { font-size: .95rem; margin: 0; }
   transition: .35s ease;
 }
 .nav-item:hover {
-  background: rgba(23, 175, 162, .12); color: #5eead4;
+  background: rgba(23, 175, 162, .12); color: var(--primary-lit);
   text-decoration: none; transform: translateX(6px);
 }
-.light .nav-item:hover { color: var(--primary); }
 .nav-item.on {
   background: var(--primary); color: #fff; border-color: transparent; font-weight: 600;
   box-shadow: 0 0 35px rgba(23, 175, 162, .5);
@@ -306,18 +312,31 @@ h3 { font-size: .95rem; margin: 0; }
   margin-left: calc(var(--sidebar-collapsed) + var(--gutter) * 2);
 }
 
+/*
+ * The bar is not a box.
+ *
+ * The prototype's sits directly on the page: a breadcrumb, the page's name, and the
+ * account control on the right. Boxing it added a second frame around content that is
+ * already in framed panels, and the page ended up looking like a stack of containers.
+ */
 .topbar {
-  display: flex; align-items: center; justify-content: space-between; gap: 14px;
-  padding: 14px 22px;
-  margin: var(--gutter) var(--gutter) 0 0;
-  border-radius: 22px;
-  border: 1px solid var(--glass-border);
-  background: var(--glass);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(35px) saturate(180%);
-  -webkit-backdrop-filter: blur(35px) saturate(180%);
-  position: sticky; top: var(--gutter); z-index: 40;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 18px;
+  padding: 30px var(--gutter) 22px 0;
+  background: none; border: 0; box-shadow: none;
+  position: relative; z-index: 40;
 }
+
+.topbar-crumb {
+  display: flex; align-items: center; gap: 8px;
+  font-size: .68rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--primary); margin-bottom: 6px;
+}
+.topbar-crumb .sep { color: var(--faint); }
+.topbar-crumb .where { color: var(--muted); }
+
+.topbar h1 { font-size: 1.9rem; letter-spacing: -.03em; }
+.topbar-lede { color: var(--muted); margin: 5px 0 0; max-width: 62ch; font-size: .88rem; }
+.topbar .top-actions { display: flex; align-items: center; gap: 12px; padding-top: 4px; }
 .topbar .who { text-align: right; line-height: 1.25; }
 .topbar .who strong { display: block; font-size: .86rem; }
 
@@ -348,6 +367,13 @@ h3 { font-size: .95rem; margin: 0; }
 .page-head .row { flex-wrap: wrap; }
 
 .page-lede { color: var(--muted); margin: 4px 0 0; max-width: 68ch; }
+
+/* Panels follow the page across a theme change instead of snapping ahead of it. */
+.card, .stat, .sidebar, .profile-sheet, .filters, .modal {
+  transition-property: background, border-color, color, transform;
+  transition-duration: .9s, .9s, .9s, .35s;
+  transition-timing-function: ease;
+}
 
 .card {
   background: var(--glass);
@@ -796,13 +822,23 @@ th.right, td.right { text-align: right; }
 .avatar-img.lg { width: 84px; height: 84px; border-radius: 22px; border-width: 3px; }
 
 .profile-sheet {
-  position: absolute; right: 0; top: calc(100% + 10px);
-  width: 250px; z-index: 60;
-  /* Opaque, and the strong surface rather than the page background — a menu you can read
-     the page through is a menu people misclick. */
-  background: var(--surface-strong); border: 1px solid var(--border-strong);
-  border-radius: var(--radius); box-shadow: var(--shadow);
-  padding: 6px;
+  position: absolute; right: 0; top: calc(100% + 12px);
+  width: 264px; z-index: 60;
+  /*
+   * Opaque base first, glass on top.
+   *
+   * The surface tokens are translucent by design — right for a panel sitting in the page,
+   * wrong for a menu floating over it. `--surface-strong` is 7.5% white in dark mode, which
+   * is why this read as see-through. The solid layer underneath is what makes it legible;
+   * the gradient over it keeps the prototype's sheen.
+   */
+  background-color: var(--menu-bg);
+  background-image: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px; box-shadow: var(--shadow);
+  padding: 8px;
+  backdrop-filter: blur(35px) saturate(180%);
+  -webkit-backdrop-filter: blur(35px) saturate(180%);
   transform-origin: top right;
   animation: sheetIn .18s cubic-bezier(.22, 1, .36, 1) both;
 }
@@ -951,3 +987,180 @@ td.right > button:first-child { margin-left: 0; }
 /* The mobile menu button only exists where the sidebar hides. */
 .mobile-menu { display: none; }
 @media (max-width: 900px) { .mobile-menu { display: inline-flex; } }
+
+/* ---------------------------------------------------------------- sidebar sign-out */
+
+/*
+ * Sign out lives at the foot of the panel, as it does in the prototype.
+ *
+ * Also in the profile menu, and that repetition is on purpose: one is where you look when
+ * you are leaving, the other is where you look when you are thinking about your account.
+ * Pushed to the bottom by `margin-top: auto`, so it sits on the panel's floor however many
+ * nav items the role has.
+ */
+.sidebar-foot { margin-top: auto; padding-top: 14px; }
+
+.logout-btn {
+  display: flex; align-items: center; gap: 15px; width: 100%;
+  padding: 14px 16px; border-radius: 16px;
+  background: rgba(248, 113, 113, .10);
+  border: 1px solid rgba(248, 113, 113, .22);
+  color: var(--bad); font-weight: 600; cursor: pointer;
+  transition: .35s ease;
+}
+.logout-btn:hover {
+  background: rgba(248, 113, 113, .18);
+  border-color: var(--bad); color: var(--bad);
+  transform: translateX(6px);
+}
+.sidebar.collapsed .logout-btn { justify-content: center; }
+.sidebar.collapsed .logout-btn:hover { transform: none; }
+
+/* ---------------------------------------------------------------- the welcome panel */
+
+/*
+ * The dashboard's opening panel, with the prototype's orbiting visual beside the greeting.
+ *
+ * The rings are decoration, but the core is not: it reports whether the assistant is
+ * reachable. A doctor learns the engine is down here, at a glance, rather than by wondering
+ * why a differential came back empty.
+ */
+.welcome {
+  display: grid; grid-template-columns: 1fr auto; gap: 34px; align-items: center;
+  padding: 40px 44px; border-radius: 30px; position: relative; overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(23, 175, 162, .20), transparent 40%),
+    var(--glass);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(35px) saturate(180%);
+  -webkit-backdrop-filter: blur(35px) saturate(180%);
+}
+.welcome::after {
+  content: ""; position: absolute; pointer-events: none;
+  width: 250px; height: 250px; right: -80px; bottom: -80px;
+  background: var(--primary); filter: blur(120px); opacity: .18;
+}
+.welcome > * { position: relative; z-index: 1; }
+
+.welcome-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 8px 18px; border-radius: 50px; margin-bottom: 22px;
+  background: rgba(23, 175, 162, .15); color: var(--primary-lit);
+  font-size: .7rem; letter-spacing: .18em; font-weight: 700; text-transform: uppercase;
+}
+.welcome h1 { font-size: clamp(1.8rem, 3.4vw, 2.7rem); letter-spacing: -.03em; }
+.welcome h1 em { font-style: normal; color: var(--primary); }
+.welcome p { color: var(--muted); line-height: 1.8; max-width: 62ch; margin: 16px 0 26px; }
+.welcome-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* The orbits */
+.orbit-visual {
+  position: relative; width: 240px; height: 240px;
+  display: grid; place-items: center; flex: none;
+}
+.orbit {
+  position: absolute; border-radius: 50%;
+  border: 1px solid rgba(23, 175, 162, .18);
+}
+.orbit.one { width: 230px; height: 230px; animation: orbitSpin 18s linear infinite; }
+.orbit.two {
+  width: 170px; height: 170px; border-color: rgba(139, 92, 246, .25);
+  animation: orbitSpinBack 12s linear infinite;
+}
+/* The travelling dot on each ring. */
+.orbit::before {
+  content: ""; position: absolute;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--primary); box-shadow: 0 0 15px rgba(23, 175, 162, .9);
+}
+.orbit.one::before { top: 18px; left: 32px; }
+.orbit.two::before {
+  bottom: 12px; right: 25px;
+  background: var(--purple); box-shadow: 0 0 15px rgba(139, 92, 246, .9);
+}
+
+@keyframes orbitSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes orbitSpinBack { from { transform: rotate(360deg); } to { transform: rotate(0); } }
+
+.orbit-core {
+  width: 112px; height: 112px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: radial-gradient(circle, rgba(23, 175, 162, .20), rgba(255, 255, 255, .04));
+  border: 1px solid rgba(23, 175, 162, .30);
+  box-shadow: 0 0 60px rgba(23, 175, 162, .16), inset 0 0 30px rgba(23, 175, 162, .08);
+  position: relative; z-index: 2; text-align: center;
+}
+.orbit-core .glyph { font-size: 24px; color: var(--primary-lit); line-height: 1; }
+.orbit-core span {
+  font-size: .56rem; letter-spacing: .14em; color: var(--muted); text-transform: uppercase;
+}
+.orbit-core strong { font-size: .72rem; letter-spacing: .1em; color: var(--primary-lit); }
+.orbit-core.down { border-color: rgba(248, 113, 113, .35); }
+.orbit-core.down .glyph, .orbit-core.down strong { color: var(--bad); }
+
+/* A pulsing dot for the eyebrow, from the prototype. */
+.pulse {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--primary-lit);
+  box-shadow: 0 0 0 0 rgba(23, 175, 162, .7);
+  animation: pulseRing 2s infinite;
+}
+@keyframes pulseRing {
+  0%   { box-shadow: 0 0 0 0 rgba(23, 175, 162, .6); }
+  70%  { box-shadow: 0 0 0 10px rgba(23, 175, 162, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(23, 175, 162, 0); }
+}
+
+@media (max-width: 900px) {
+  .welcome { grid-template-columns: 1fr; padding: 28px; }
+  .orbit-visual { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit, .pulse { animation: none; }
+}
+
+/* ---------------------------------------------------------------- theme fade */
+
+/*
+ * Panels cross-fade with the page, rather than snapping ahead of it.
+ *
+ * Last in the file on purpose: each of these sets its own `transition` where it is defined,
+ * and a shorthand there would drop the theme properties again. Declared once, here, so the
+ * whole surface turns over together and you can actually watch it happen.
+ *
+ * `background` rather than `background-color`: the glass is a gradient, which is a
+ * background-image, and animating only the colour leaves every panel snapping.
+ */
+.card,
+.stat,
+.sidebar,
+.topbar,
+.welcome,
+.profile-sheet,
+.filters,
+.modal,
+.side,
+.panel,
+.block,
+.note,
+.pill,
+input, select, textarea, button {
+  transition-property: background, background-color, border-color, color, box-shadow, transform;
+  transition-duration: .9s, .9s, .9s, .9s, .9s, .35s;
+  transition-timing-function: ease;
+}
+
+/* Hover has to stay quick — a button that takes .9s to acknowledge the cursor feels broken. */
+.card:hover, .stat:hover, .nav-item:hover, .rail-btn:hover,
+button:hover, .glass:hover, .logout-btn:hover {
+  transition-duration: .2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .stat, .sidebar, .topbar, .welcome, .profile-sheet,
+  .filters, .modal, .side, .panel, .block, .note, .pill,
+  input, select, textarea, button {
+    transition-duration: .01ms !important;
+  }
+}
