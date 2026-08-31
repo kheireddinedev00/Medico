@@ -1,3 +1,5 @@
+import { useCountUp } from '../useCountUp'
+
 /**
  * The small vocabulary the dashboards are built from.
  *
@@ -10,11 +12,18 @@
  * keeps them intact on the administrator's black-and-white printout.
  */
 
-/** One headline number. `tone` tints the edge; the label always says what it is. */
+/**
+ * One headline number, counted up to.
+ *
+ * `tone` tints the edge; the label always says what it is, because a colour on its own
+ * is not something everyone can read.
+ */
 export function Stat({ value, label, foot, tone }) {
+  const shown = useCountUp(value)
+
   return (
     <div className={`stat${tone ? ` is-${tone}` : ''}`}>
-      <div className="stat-value">{value ?? '—'}</div>
+      <div className="stat-value">{value == null ? '—' : shown}</div>
       <div className="stat-label">{label}</div>
       {foot && <div className="stat-foot">{foot}</div>}
     </div>

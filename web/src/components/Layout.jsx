@@ -73,7 +73,7 @@ export default function Layout() {
   ].filter((l) => l.roles.includes(user.role))
 
   return (
-    <div className="shell">
+    <div className={`shell${collapsed ? ' collapsed' : ''}`}>
       <div className="aurora" aria-hidden="true"><span /><span /><span /></div>
 
       <aside className={`sidebar${collapsed ? ' collapsed' : ''}${mobileOpen ? ' open' : ''}`}>
@@ -103,6 +103,7 @@ export default function Layout() {
 
         <div className="nav-group">Clinic</div>
 
+        <nav className="sidebar-nav">
         {links.map((l) => (
           <NavLink
             key={l.to}
@@ -116,6 +117,7 @@ export default function Layout() {
             {l.count > 0 && <span className="nav-count">{l.count}</span>}
           </NavLink>
         ))}
+        </nav>
       </aside>
 
       <div className="main">

@@ -52,11 +52,21 @@
   --ai-soft: rgba(167, 139, 250, .12);
   --ai-border: rgba(167, 139, 250, .30);
 
-  --radius: 14px;
-  --radius-sm: 9px;
-  --shadow: 0 18px 40px rgba(0, 0, 0, .45);
-  --sidebar-w: 244px;
-  --sidebar-collapsed: 76px;
+  /* The prototype's glass: a 145° sheen rather than a flat wash, which is what gives
+     the panels their edge-lit look. */
+  --glass: linear-gradient(145deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .035));
+  --glass-strong: linear-gradient(145deg, rgba(255, 255, 255, .15), rgba(255, 255, 255, .045));
+  --glass-border: rgba(255, 255, 255, .14);
+
+  --radius: 26px;
+  --radius-sm: 16px;
+  --shadow: inset 0 1px 1px rgba(255, 255, 255, .12), 0 25px 70px rgba(0, 0, 0, .30);
+
+  /* Floating, with a margin all round — which is what gives the edge buttons somewhere
+     to hang. See `.sidebar`. */
+  --gutter: 24px;
+  --sidebar-w: 250px;
+  --sidebar-collapsed: 92px;
 
   --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -86,7 +96,10 @@
   --ai-soft: rgba(109, 40, 217, .08);
   --ai-border: rgba(109, 40, 217, .25);
 
-  --shadow: 0 14px 34px rgba(15, 23, 42, .10);
+  --glass: linear-gradient(145deg, rgba(255, 255, 255, .88), rgba(255, 255, 255, .58));
+  --glass-strong: linear-gradient(145deg, rgba(255, 255, 255, .95), rgba(255, 255, 255, .70));
+  --glass-border: rgba(15, 23, 42, .10);
+  --shadow: inset 0 1px 1px rgba(255, 255, 255, .6), 0 25px 70px rgba(15, 23, 42, .15);
 }
 
 * { box-sizing: border-box; }
@@ -96,9 +109,9 @@ html, body, #root { height: 100%; }
 body {
   margin: 0;
   background: var(--bg);
-  /* Light and dark cross-fade rather than snapping. Only the two properties that carry
-     the theme — animating `all` here would drag every layout change through 350ms too. */
-  transition: background-color .35s ease, color .35s ease;
+  /* The prototype's .4s cross-fade. Only the two properties that carry the theme —
+     animating `all` would drag every layout change through it too. */
+  transition: background .4s ease, color .4s ease;
   color: var(--text);
   font-family: var(--font);
   font-size: 14px;
@@ -157,136 +170,158 @@ h3 { font-size: .95rem; margin: 0; }
  * context — which excluded the page background, so a translucent light sidebar composited
  * against nothing and rendered dark. Painting the background here puts it inside.
  */
-.shell {
-  display: flex; min-height: 100vh;
-  position: relative; z-index: 1;
-  background: var(--bg);
-}
+.shell { position: relative; z-index: 1; min-height: 100vh; background: var(--bg); }
 
+/*
+ * A floating panel, not a flush column.
+ *
+ * This is the prototype's shape and it is not only decoration: the panel is inset from
+ * every edge, and that gutter is what the two round buttons hang in. Flush against the
+ * content they were clipped in half by the sidebar's own bounds, which is exactly what
+ * went wrong before.
+ */
 .sidebar {
+  position: fixed;
+  top: var(--gutter); left: var(--gutter);
   width: var(--sidebar-w);
-  flex: 0 0 var(--sidebar-w);
-  padding: 18px 12px;
-  display: flex; flex-direction: column; gap: 4px;
-  border-right: 1px solid var(--border);
-  background: var(--surface);
-  backdrop-filter: blur(14px);
-  position: sticky; top: 0; height: 100vh;
-  /* The prototype's timing. Long enough to read as the panel resizing rather than
-     snapping, short enough not to be waited on. */
-  transition: width .4s ease, flex-basis .4s ease, padding .4s ease;
+  height: calc(100vh - var(--gutter) * 2);
+  padding: 26px 18px;
+  display: flex; flex-direction: column; gap: 6px;
+  border-radius: 30px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(35px) saturate(180%);
+  -webkit-backdrop-filter: blur(35px) saturate(180%);
+  z-index: 100;
+  transition: width .4s ease, padding .4s ease;
 }
 
 /*
  * The two round buttons riding the sidebar's right edge.
  *
- * Straight from the prototype, including the half-overhang: they sit on the seam between
- * the sidebar and the page, which is what makes them read as belonging to the sidebar
- * rather than floating in the content.
+ * The prototype's, including the overhang: they sit half outside the panel, in the gutter
+ * the floating sidebar leaves. That gutter is why they are whole here — pinned to a flush
+ * column they were clipped down the middle by the panel's own bounds.
  */
 .rail-btn {
-  position: absolute; right: -16px;
-  width: 32px; height: 32px; padding: 0;
-  border-radius: 50%; border: 1px solid var(--border-strong);
-  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-  color: #fff; font-size: 13px; line-height: 1;
+  position: absolute; right: -17px;
+  width: 35px; height: 35px; padding: 0;
+  border-radius: 50%; border: 1px solid var(--glass-border);
+  background: var(--primary);
+  color: #fff; font-size: 14px; line-height: 1;
   display: grid; place-items: center; cursor: pointer;
-  box-shadow: 0 0 22px rgba(23, 175, 162, .45);
-  transition: transform .35s ease, box-shadow .35s ease, background .35s ease;
+  box-shadow: 0 0 25px rgba(23, 175, 162, .5);
+  transition: .35s;
   z-index: 5;
 }
 .rail-btn:hover {
   transform: scale(1.12);
-  box-shadow: 0 0 34px rgba(23, 175, 162, .7);
-  color: #fff; border-color: var(--border-strong);
+  box-shadow: 0 0 35px rgba(23, 175, 162, .7);
+  color: #fff; border-color: var(--glass-border); background: var(--primary-hover);
 }
-.rail-collapse { top: 24px; }
-.rail-theme { top: 68px; }
+.rail-collapse { top: 26px; }
+.rail-theme { top: 76px; }
 
 /* The icon turns as the mode changes, so the switch has a direction. */
 .rail-theme span { display: block; transition: transform .5s cubic-bezier(.4, 0, .2, 1); }
 .light .rail-theme span { transform: rotate(180deg); }
 
-/* Dark mode's strong surface is translucent, which is right for panels sitting in the
-   page and wrong for one floating over it. */
-.profile-sheet { background-color: var(--bg); }
-.light .profile-sheet { background-color: #fff; }
-.sidebar.collapsed { width: var(--sidebar-collapsed); flex-basis: var(--sidebar-collapsed); }
+.sidebar.collapsed { width: var(--sidebar-collapsed); padding: 26px 12px; }
 .sidebar.collapsed .nav-label,
 .sidebar.collapsed .brand-word { display: none; }
 .sidebar.collapsed .nav-item { justify-content: center; }
 
-.brand {
-  display: flex; align-items: center; gap: 9px;
-  font-weight: 700; font-size: 1.12rem; letter-spacing: -.02em;
-  padding: 6px 10px 14px;
-  color: var(--text);
+/* The nav scrolls on a short screen; the panel itself never does, so the rounded corners
+   and the buttons on the edge stay put. */
+.sidebar-nav {
+  flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; gap: 6px;
+  margin-right: -6px; padding-right: 6px;
+  scrollbar-width: thin;
 }
+
+.brand {
+  display: flex; align-items: center; gap: 11px;
+  font-weight: 700; font-size: 1.4rem; letter-spacing: -.02em;
+  padding: 2px 6px 26px;
+  color: var(--text); white-space: nowrap;
+}
+.sidebar.collapsed .brand { justify-content: center; padding-left: 0; padding-right: 0; }
 .brand-mark {
-  width: 30px; height: 30px; border-radius: 9px; flex: none;
-  display: grid; place-items: center; font-size: 15px;
+  width: 38px; height: 38px; border-radius: 13px; flex: none;
+  display: grid; place-items: center; font-size: 19px;
   background: linear-gradient(135deg, var(--primary), var(--purple));
   color: #fff;
 }
 
+/* The prototype's proportions: roomy rows, generous radius, a real gap to the icon. */
 .nav-item {
-  display: flex; align-items: center; gap: 11px;
-  padding: 9px 11px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; gap: 15px;
+  padding: 14px 16px; border-radius: 16px;
   color: var(--muted); font-weight: 500; cursor: pointer;
   border: 1px solid transparent; text-decoration: none;
-  transition: background .12s ease, color .12s ease;
+  transition: .35s ease;
 }
 .nav-item:hover {
-  background: rgba(23, 175, 162, .12); color: var(--primary-hover);
-  text-decoration: none; transform: translateX(5px);
+  background: rgba(23, 175, 162, .12); color: #5eead4;
+  text-decoration: none; transform: translateX(6px);
 }
-/* Solid rather than tinted, with the prototype's glow. The current page should be the
-   loudest thing in the sidebar, not a slightly different shade of the others. */
+.light .nav-item:hover { color: var(--primary); }
 .nav-item.on {
   background: var(--primary); color: #fff; border-color: transparent; font-weight: 600;
-  box-shadow: 0 0 26px rgba(23, 175, 162, .45);
+  box-shadow: 0 0 35px rgba(23, 175, 162, .5);
 }
 .nav-item.on:hover { transform: none; color: #fff; }
 .nav-item.on .nav-count { background: rgba(255, 255, 255, .22); color: #fff; }
-/* Collapsed, the slide would push the icon off its centre line. */
 .sidebar.collapsed .nav-item:hover { transform: none; }
-.nav-icon { width: 18px; text-align: center; font-size: 15px; flex: none; }
+
+.nav-icon { width: 22px; text-align: center; font-size: 16px; flex: none; }
 /* Clip rather than wrap. Mid-transition the sidebar is narrower than the label, and a
    wrapping label reflows every row beneath it for the length of the animation. */
 .nav-label { white-space: nowrap; overflow: hidden; }
-.sidebar { overflow-x: hidden; }
 .nav-count {
   margin-left: auto; font-size: .72rem; font-weight: 700;
-  padding: 1px 7px; border-radius: 999px;
+  padding: 1px 8px; border-radius: 999px;
   background: var(--bad-soft); color: var(--bad);
 }
 .sidebar.collapsed .nav-count { display: none; }
 
 .nav-group {
   font-size: .68rem; text-transform: uppercase; letter-spacing: .09em;
-  color: var(--faint); padding: 14px 12px 5px; font-weight: 700;
+  color: var(--faint); padding: 6px 16px 8px; font-weight: 700;
 }
-.sidebar.collapsed .nav-group { text-align: center; font-size: 0; padding: 10px 0 4px; }
+.sidebar.collapsed .nav-group { font-size: 0; padding: 4px 0 8px; }
 .sidebar.collapsed .nav-group::after {
-  content: ""; display: block; height: 1px; background: var(--border);
+  content: ""; display: block; height: 1px; background: var(--glass-border);
 }
 
-.sidebar-foot { margin-top: auto; padding-top: 12px; }
-
-.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.main {
+  min-width: 0; display: flex; flex-direction: column; min-height: 100vh;
+  margin-left: calc(var(--sidebar-w) + var(--gutter) * 2);
+  transition: margin-left .4s ease;
+  isolation: isolate;
+}
+.shell.collapsed .main {
+  margin-left: calc(var(--sidebar-collapsed) + var(--gutter) * 2);
+}
 
 .topbar {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
-  padding: 12px 22px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  backdrop-filter: blur(14px);
-  position: sticky; top: 0; z-index: 40;
+  padding: 14px 22px;
+  margin: var(--gutter) var(--gutter) 0 0;
+  border-radius: 22px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(35px) saturate(180%);
+  -webkit-backdrop-filter: blur(35px) saturate(180%);
+  position: sticky; top: var(--gutter); z-index: 40;
 }
 .topbar .who { text-align: right; line-height: 1.25; }
 .topbar .who strong { display: block; font-size: .86rem; }
 
-.content { flex: 1; padding: 22px; position: relative; z-index: 0; }
+.content { flex: 1; padding: 22px var(--gutter) 22px 0; position: relative; z-index: 0; }
 
 /*
  * The top bar and its dropdown own a layer above the page.
@@ -295,10 +330,9 @@ h3 { font-size: .95rem; margin: 0; }
  * whatever the page happens to promote — a transformed card, an element mid-animation —
  * and the profile menu ends up underneath a button it is meant to cover.
  */
-.main { isolation: isolate; }
 
 .disclaimer {
-  padding: 14px 22px 26px;
+  padding: 14px var(--gutter) 26px 0;
   color: var(--faint); font-size: .76rem;
   border-top: 1px solid var(--border);
 }
@@ -316,13 +350,14 @@ h3 { font-size: .95rem; margin: 0; }
 .page-lede { color: var(--muted); margin: 4px 0 0; max-width: 68ch; }
 
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  padding: 16px 18px;
-  backdrop-filter: blur(10px);
+  padding: 22px 24px;
+  backdrop-filter: blur(35px) saturate(180%);
+  -webkit-backdrop-filter: blur(35px) saturate(180%);
   box-shadow: var(--shadow);
-  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+  transition: transform .35s ease, border-color .35s ease;
 }
 .card + .card { margin-top: 14px; }
 
@@ -484,23 +519,30 @@ th.right, td.right { text-align: right; }
 
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
 
+/*
+ * The prototype's stat tile: deep padding, a 26px radius and a blurred bloom bleeding out
+ * of the bottom-right corner. The bloom is what stops a grid of them reading as a table.
+ */
 .stat {
   position: relative; overflow: hidden;
-  padding: 15px 17px; border-radius: var(--radius);
-  border: 1px solid var(--border); background: var(--surface);
-  backdrop-filter: blur(10px);
-  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+  padding: 24px; border-radius: var(--radius);
+  border: 1px solid var(--glass-border); background: var(--glass);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(35px) saturate(180%);
+  -webkit-backdrop-filter: blur(35px) saturate(180%);
+  transition: transform .35s ease, border-color .35s ease;
 }
-.stat:hover {
-  transform: translateY(-3px);
-  border-color: rgba(23, 175, 162, .32);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, .3);
+.stat::before {
+  content: ""; position: absolute; pointer-events: none;
+  width: 140px; height: 140px; right: -75px; bottom: -75px;
+  border-radius: 50%; background: rgba(23, 175, 162, .10); filter: blur(45px);
 }
-.light .stat:hover { box-shadow: 0 14px 30px rgba(15, 23, 42, .12); }
+.stat:hover, .card:hover { transform: translateY(-6px); border-color: rgba(23, 175, 162, .30); }
+/* Rows of records are read, not hovered over — lifting them is motion for its own sake. */
+.card.flat:hover, .page > .card:hover { transform: none; }
 
-/* Counting up on arrival. Short, and skipped for reduced motion. */
-.stat-value { animation: riseIn .45s ease both; }
-@keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* Numerals do not jitter as they count: every digit takes the same width. */
+.stat-value { font-variant-numeric: tabular-nums; }
 .stat::after {
   content: ""; position: absolute; inset: 0 auto 0 0; width: 3px;
   background: var(--primary); opacity: .8;
@@ -510,9 +552,9 @@ th.right, td.right { text-align: right; }
 .stat.is-ok::after   { background: var(--ok); }
 .stat.is-ai::after   { background: var(--ai); }
 
-.stat-value { font-size: 1.85rem; font-weight: 700; letter-spacing: -.03em; line-height: 1.1; }
-.stat-label { color: var(--muted); font-size: .82rem; margin-top: 2px; }
-.stat-foot { color: var(--faint); font-size: .74rem; margin-top: 6px; }
+.stat-value { font-size: 2.6rem; font-weight: 700; letter-spacing: -.04em; line-height: 1.05; }
+.stat-label { color: var(--muted); font-size: .88rem; margin-top: 4px; }
+.stat-foot { color: var(--faint); font-size: .76rem; margin-top: 8px; }
 
 .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; align-items: start; }
 
