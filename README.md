@@ -81,6 +81,34 @@ cd web && npm install && npm run dev
 
 Three processes in all: the engine on 8001, the API on 8000, the front end on 5173.
 
+Open it at `http://127.0.0.1:5173` rather than `localhost:5173`. On Windows the name
+resolves through IPv6 first and the fallback costs about 200ms on every request.
+
+### Turn OPcache on
+
+Not optional if you want the interface to feel quick. Without it PHP recompiles the whole
+framework on every request: `/api/patients` measured 200ms with it off and 65ms with it on,
+for a query the database answers in 1.2ms.
+
+It ships with PHP and is simply commented out. In `php.ini` — `php --ini` says which one —
+uncomment and set:
+
+```ini
+zend_extension=opcache
+opcache.enable=1
+opcache.enable_cli=1
+opcache.memory_consumption=192
+opcache.validate_timestamps=1
+opcache.revalidate_freq=0
+```
+
+`enable_cli` matters because `php artisan serve` runs through the CLI SAPI, so without it
+the dev server caches nothing. Keep `validate_timestamps` on with `revalidate_freq=0`: PHP
+then checks whether a file changed on each request and recompiles only when it has, which
+is what stops you debugging code you already edited.
+
+Restart `php artisan serve` afterwards — a running server keeps the settings it booted with.
+
 ### Everything else
 
 | Command | What it does |
