@@ -25,9 +25,14 @@ use Illuminate\Support\Facades\Storage;
  * the delete path. The engine refuses independently, on the chunks themselves, so the rule
  * survives someone calling it directly.
  *
+ * Reading is open to every clinical role; changing it is the administrator's alone. An
+ * added document becomes evidence the assistant retrieves and quotes into a differential,
+ * so it affects every consultation by every clinician rather than only the person who added
+ * it. That makes it closer to a configuration change than to clinical work, which is the
+ * same reason accounts are the administrator's.
+ *
  * What is worth being clear about: "verified" means a clinician vouched for it. Nothing
- * here can check that a document is sound. An added document becomes evidence the assistant
- * retrieves and quotes into a differential, which is why every addition and removal is
+ * here can check that a document is sound, which is why every addition and removal is
  * audited and why the listing says who added what.
  */
 class ReferenceDocumentController extends Controller
@@ -72,7 +77,7 @@ class ReferenceDocumentController extends Controller
     }
 
     /**
-     * Add a document to the library.
+     * Add a document to the library. The administrator's, enforced at the route.
      *
      * Slow, and synchronous on purpose. Embedding runs before this returns, so when the
      * physician sees the document listed the assistant can already cite it — the

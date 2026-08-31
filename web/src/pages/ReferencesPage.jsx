@@ -21,7 +21,15 @@ export default function ReferencesPage() {
   const [error, setError] = useState(null)
   const [modal, setModal] = useState(null)
 
-  const canEdit = user.role === 'doctor' || user.role === 'admin'
+  /*
+   * Reading is everyone's; changing is the administrator's.
+   *
+   * An added document becomes evidence the assistant quotes into every clinician's
+   * differentials, not just the adder's — closer to a configuration change than to
+   * clinical work. The API enforces this independently; hiding the buttons only avoids
+   * offering a doctor a door that will refuse them.
+   */
+  const canEdit = user.role === 'admin'
 
   const refresh = useCallback(() => {
     api.references()
@@ -67,8 +75,17 @@ export default function ReferencesPage() {
 
         {added.length === 0 && (
           <p className="empty small">
-            None yet. A local protocol or a guideline the clinic follows can be added here,
-            and the assistant will cite it alongside the published sources.
+            None yet. A local protocol or a guideline the clinic follows can be added here
+            by an administrator, and the assistant will cite it alongside the published
+            sources.
+          </p>
+        )}
+
+        {!canEdit && added.length > 0 && (
+          <p className="muted small">
+            Read-only. What the assistant may reason from is set by an administrator: a
+            document added here is quoted into every clinician's differentials, not only
+            the adder's.
           </p>
         )}
 

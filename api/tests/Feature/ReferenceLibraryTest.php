@@ -14,9 +14,16 @@ use Tests\TestCase;
 /**
  * The assistant's reference library.
  *
- * One property matters more than the rest: the curated guidelines cannot be removed through
- * this application. It is checked from both directions here — that no route can name them,
- * and that a doctor who tries is refused rather than quietly succeeding.
+ * Two properties matter more than the rest.
+ *
+ * The curated guidelines cannot be removed through this application, checked from both
+ * directions: no route can name them, and a caller who forges a row is refused by the
+ * engine rather than quietly succeeding.
+ *
+ * And the library is the administrator's to change. A doctor reads it — knowing what the
+ * assistant reasons from is part of reading its suggestions honestly — but an added
+ * document is quoted into every clinician's differentials, which makes editing the corpus
+ * a configuration change rather than clinical work.
  *
  * The engine is mocked throughout. Embedding a document takes real seconds and loads a
  * model; what is under test is who may do what, and what gets recorded — none of which
@@ -35,6 +42,11 @@ class ReferenceLibraryTest extends TestCase
     private function doctor(): User
     {
         return User::where('role', 'doctor')->firstOrFail();
+    }
+
+    private function admin(): User
+    {
+        return User::where('role', 'admin')->firstOrFail();
     }
 
     /** The engine's view of the library: two curated documents, plus whatever is passed. */
@@ -113,9 +125,9 @@ class ReferenceLibraryTest extends TestCase
 
     // ---- adding ----------------------------------------------------------------------
 
-    public function test_a_doctor_adds_a_document_and_it_is_recorded_against_them(): void
+    public function test_an_administrator_adds_a_document_and_it_is_recorded_against_them(): void
     {
-        $doctor = $this->doctor();
+        $admin = $this->admin();
         $engine = $this->fakeEngine();
 
         $engine->shouldReceive('addReference')->once()->andReturn([
@@ -126,7 +138,7 @@ class ReferenceLibraryTest extends TestCase
             'origin' => 'added',
         ]);
 
-        $this->actingAs($doctor, 'sanctum');
+        $this->actingAs($admin, 'sanctum');
 
         $this->postJson('/api/references', [
             'file' => UploadedFile::fake()->createWithContent('protocol.txt', 'Wheeze protocol.'),
@@ -139,28 +151,42 @@ class ReferenceLibraryTest extends TestCase
             'source_name' => 'protocol.txt',
             'title' => 'Clinic Asthma Protocol',
             'chunks' => 4,
-            'added_by' => $doctor->id,
+            'added_by' => $admin->id,
         ]);
     }
 
     public function test_adding_a_document_is_audited(): void
     {
-        $doctor = $this->doctor();
+        $admin = $this->admin();
         $engine = $this->fakeEngine();
         $engine->shouldReceive('addReference')->andReturn([
             'source_name' => 'protocol.txt', 'chunks' => 2, 'origin' => 'added',
         ]);
 
-        $this->actingAs($doctor, 'sanctum');
+        $this->actingAs($admin, 'sanctum');
         $this->postJson('/api/references', [
             'file' => UploadedFile::fake()->createWithContent('protocol.txt', 'text'),
             'title' => 'Protocol',
         ])->assertCreated();
 
         $this->assertDatabaseHas('audit_logs', [
-            'user_id' => $doctor->id,
+            'user_id' => $admin->id,
             'action' => 'reference.added',
         ]);
+    }
+
+    public function test_a_doctor_cannot_add_a_document(): void
+    {
+        // Reading, yes. Changing what every colleague's differentials are built from, no.
+        $this->fakeEngine();
+        $this->actingAs($this->doctor(), 'sanctum');
+
+        $this->postJson('/api/references', [
+            'file' => UploadedFile::fake()->createWithContent('protocol.txt', 'text'),
+            'title' => 'Protocol',
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('reference_documents', 0);
     }
 
     public function test_a_nurse_cannot_add_a_document(): void
@@ -179,7 +205,7 @@ class ReferenceLibraryTest extends TestCase
     public function test_a_file_type_the_chunker_cannot_read_is_refused(): void
     {
         $this->fakeEngine();
-        $this->actingAs($this->doctor(), 'sanctum');
+        $this->actingAs($this->admin(), 'sanctum');
 
         $this->postJson('/api/references', [
             'file' => UploadedFile::fake()->create('slides.pptx', 100),
@@ -192,7 +218,7 @@ class ReferenceLibraryTest extends TestCase
     public function test_a_document_without_a_title_is_refused(): void
     {
         $this->fakeEngine();
-        $this->actingAs($this->doctor(), 'sanctum');
+        $this->actingAs($this->admin(), 'sanctum');
 
         $this->postJson('/api/references', [
             'file' => UploadedFile::fake()->createWithContent('protocol.txt', 'text'),
@@ -201,9 +227,9 @@ class ReferenceLibraryTest extends TestCase
 
     // ---- removing --------------------------------------------------------------------
 
-    public function test_a_doctor_removes_a_document_they_added(): void
+    public function test_an_administrator_removes_an_added_document(): void
     {
-        $doctor = $this->doctor();
+        $admin = $this->admin();
         $engine = $this->fakeEngine();
         $engine->shouldReceive('removeReference')->once()->with('protocol.txt')
             ->andReturn(['source_name' => 'protocol.txt', 'removed_chunks' => 4]);
@@ -213,10 +239,10 @@ class ReferenceLibraryTest extends TestCase
             'original_filename' => 'protocol.txt',
             'title' => 'Protocol',
             'chunks' => 4,
-            'added_by' => $doctor->id,
+            'added_by' => $admin->id,
         ]);
 
-        $this->actingAs($doctor, 'sanctum');
+        $this->actingAs($admin, 'sanctum');
 
         $this->deleteJson("/api/references/{$document->source_name}")
             ->assertOk()
@@ -227,20 +253,20 @@ class ReferenceLibraryTest extends TestCase
 
     public function test_removal_is_audited_with_what_was_removed(): void
     {
-        $doctor = $this->doctor();
+        $admin = $this->admin();
         $engine = $this->fakeEngine();
         $engine->shouldReceive('removeReference')->andReturn(['removed_chunks' => 4]);
 
         $document = ReferenceDocument::create([
             'source_name' => 'protocol.txt', 'original_filename' => 'protocol.txt',
-            'title' => 'Protocol', 'chunks' => 4, 'added_by' => $doctor->id,
+            'title' => 'Protocol', 'chunks' => 4, 'added_by' => $admin->id,
         ]);
 
-        $this->actingAs($doctor, 'sanctum');
+        $this->actingAs($admin, 'sanctum');
         $this->deleteJson("/api/references/{$document->source_name}")->assertOk();
 
         $this->assertDatabaseHas('audit_logs', [
-            'user_id' => $doctor->id,
+            'user_id' => $admin->id,
             'action' => 'reference.removed',
         ]);
     }
@@ -257,7 +283,7 @@ class ReferenceLibraryTest extends TestCase
         $engine = $this->fakeEngine();
         $engine->shouldNotReceive('removeReference');
 
-        $this->actingAs($this->doctor(), 'sanctum');
+        $this->actingAs($this->admin(), 'sanctum');
 
         foreach (['GINA-2026.pdf', 'GOLD-2026.pdf', 'invented.txt'] as $attempt) {
             $this->deleteJson('/api/references/'.$attempt)->assertNotFound();
@@ -277,16 +303,32 @@ class ReferenceLibraryTest extends TestCase
 
         $document = ReferenceDocument::create([
             'source_name' => 'GINA-2026.pdf', 'original_filename' => 'GINA-2026.pdf',
-            'title' => 'GINA', 'chunks' => 185, 'added_by' => $this->doctor()->id,
+            'title' => 'GINA', 'chunks' => 185, 'added_by' => $this->admin()->id,
         ]);
 
-        $this->actingAs($this->doctor(), 'sanctum');
+        $this->actingAs($this->admin(), 'sanctum');
 
         $this->deleteJson("/api/references/{$document->source_name}")
             ->assertStatus(409)
             ->assertJsonPath('reason', 'protected_document');
 
         // The row survives, because the corpus did.
+        $this->assertDatabaseHas('reference_documents', ['id' => $document->id]);
+    }
+
+    public function test_a_doctor_cannot_remove_a_document(): void
+    {
+        $engine = $this->fakeEngine();
+        $engine->shouldNotReceive('removeReference');
+
+        $document = ReferenceDocument::create([
+            'source_name' => 'protocol.txt', 'original_filename' => 'protocol.txt',
+            'title' => 'Protocol', 'chunks' => 4, 'added_by' => $this->admin()->id,
+        ]);
+
+        $this->actingAs($this->doctor(), 'sanctum');
+
+        $this->deleteJson("/api/references/{$document->source_name}")->assertForbidden();
         $this->assertDatabaseHas('reference_documents', ['id' => $document->id]);
     }
 
@@ -297,7 +339,7 @@ class ReferenceLibraryTest extends TestCase
 
         $document = ReferenceDocument::create([
             'source_name' => 'protocol.txt', 'original_filename' => 'protocol.txt',
-            'title' => 'Protocol', 'chunks' => 4, 'added_by' => $this->doctor()->id,
+            'title' => 'Protocol', 'chunks' => 4, 'added_by' => $this->admin()->id,
         ]);
 
         $this->actingAs(User::where('role', 'nurse')->firstOrFail(), 'sanctum');

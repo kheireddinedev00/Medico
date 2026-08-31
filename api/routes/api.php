@@ -172,9 +172,15 @@ Route::middleware('auth:sanctum')->group(function () {
     /*
      * The assistant's reference library.
      *
-     * Reading it is open to the clinical roles — knowing what the assistant reasons from is
-     * part of reading its suggestions honestly. Adding and removing belong to doctors and
-     * administrators, because an added document becomes citable evidence in a differential.
+     * Reading it is open to every clinical role — knowing what the assistant reasons from
+     * is part of reading its suggestions honestly, and a nurse who can see the corpus can
+     * tell whether a citation came from a guideline or from something the clinic added.
+     *
+     * Changing it is the administrator's alone. An added document becomes evidence the
+     * assistant retrieves and quotes into a differential, which makes it closer to a
+     * configuration change than to clinical work: it affects every consultation by every
+     * clinician, not just the one who added it. That is the same reason accounts are the
+     * administrator's, and it is why a doctor reads this library but does not edit it.
      *
      * The curated guidelines are not reachable from any of these routes: `destroy` binds to
      * `reference_documents`, which only holds what `store` put there, and the engine refuses
@@ -184,7 +190,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/references', [ReferenceDocumentController::class, 'index']);
     });
 
-    Route::middleware('role:doctor,admin')->group(function () {
+    Route::middleware('role:admin')->group(function () {
         Route::post('/references', [ReferenceDocumentController::class, 'store']);
         Route::delete('/references/{document}', [ReferenceDocumentController::class, 'destroy']);
     });
