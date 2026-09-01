@@ -558,6 +558,17 @@ input:focus, select:focus, textarea:focus {
   outline: none; border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
+/*
+ * A date field the same height as everything beside it.
+ *
+ * Chrome's date input inherits the padding set above into its own internal editor and
+ * applies it a second time, so a date came out 40px against the 38px of every other
+ * control — which is what threw the Sex box out of line with the date next to it on the
+ * registration form. The outer padding is already there; zero the inner copy. Measured
+ * rather than guessed: 40.34px -> 38.34px, exactly matching the dropdown beside it.
+ */
+input[type="date"]::-webkit-datetime-edit-fields-wrapper { padding: 0; }
+
 input::placeholder, textarea::placeholder { color: var(--faint); }
 textarea { resize: vertical; }
 select option { background: var(--bg-deep); color: var(--text); }

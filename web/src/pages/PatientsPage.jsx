@@ -106,7 +106,6 @@ export default function PatientsPage() {
             { value: '', label: 'Any' },
             { value: 'female', label: 'Female' },
             { value: 'male', label: 'Male' },
-            { value: 'other', label: 'Other' },
           ]} />
         </div>
 

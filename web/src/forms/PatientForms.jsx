@@ -45,16 +45,18 @@ export function NewPatientForm({ onCreated, onCancel }) {
       </label>
 
       <div className="form-row">
-        <div>
-          <label htmlFor="sex">Sex</label>
+        {/* A label wrapping its control, like every other field on this form. As a bare
+            div beside a label it missed the 5px the others get and sat a few pixels
+            high of the date beside it. */}
+        <label htmlFor="sex">Sex
           <Filter
             id="sex"
             value={values.sex}
             onChange={(v) => setValues({ ...values, sex: v })}
-            options={['unknown', 'male', 'female', 'other']
+            options={['unknown', 'male', 'female']
               .map((s) => ({ value: s, label: labelFor(s) }))}
           />
-        </div>
+        </label>
         <label>Date of birth
           <input type="date" value={values.date_of_birth ?? ''} onChange={set('date_of_birth')} />
         </label>
