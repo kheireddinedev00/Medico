@@ -15,6 +15,20 @@
  *    the message is written for a clinician. Show it to them verbatim.
  */
 
+/**
+ * Where the backend lives.
+ *
+ * The default is the relative path `/api`, which the dev server proxies to Laravel — see
+ * `vite.config.js`. That keeps the browser and the API on one origin, so there is no CORS
+ * configuration to maintain and the token is never sent cross-site.
+ *
+ * Set `VITE_API_URL` to an absolute URL when the two are deployed to different hosts. Doing
+ * so makes the requests cross-origin, which needs CORS configured on the Laravel side and
+ * the origin added to `config/sanctum.php`. Nothing here has to change for that; this is
+ * the only place the address is decided.
+ */
+const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '')
+
 const TOKEN_KEY = 'cdss.token'
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY)
@@ -46,7 +60,7 @@ async function request(method, path, body) {
     payload = JSON.stringify(body)
   }
 
-  const response = await fetch(`/api${path}`, { method, headers, body: payload })
+  const response = await fetch(`${API_URL}${path}`, { method, headers, body: payload })
   const text = await response.text()
   const json = text ? JSON.parse(text) : null
 

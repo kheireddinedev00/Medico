@@ -197,22 +197,50 @@ def test_non_drug_advice_passes_through_untouched():
     assert result.notes == ["Review in a week"]
 
 
-# --- the fixtures the project ships with -----------------------------------------
+# --- the two charts the fixture record is built around ---------------------------
+#
+# These used to be read out of the shipped seed file. That file now belongs to the backend
+# (`api/database/seed/patients.json`), and a Python test reaching into the PHP application
+# for it would restore the coupling that move was made to remove. So the two charts are
+# built here instead, and what is asserted is the screening rule rather than the contents
+# of a file. The names are kept because the fixtures are recognisable by them.
 
 
-def test_the_seeded_patients_behave_as_intended():
-    """P-001 and P-003 exist to exercise exactly these two rules."""
-    from storage.seed import load_seed
+def test_a_penicillin_allergy_withholds_the_penicillin_only():
+    """Kamel Bouzid's chart: severe penicillin allergy, on COPD inhalers."""
+    kamel = profile(
+        allergies=[
+            Allergy(
+                substance="Penicillin",
+                reaction="urticaria and facial swelling",
+                severity="severe",
+            )
+        ],
+        medications=[Medication(name="Tiotropium", indication="COPD")],
+    )
 
-    patients, _ = load_seed()
-    by_id = {p.id: p for p in patients}
+    advice = screen(suggest("Amoxicillin", "Doxycycline"), kamel)
 
-    kamel = screen(suggest("Amoxicillin", "Doxycycline"), by_id["P-001"])
-    assert [m.name for m in kamel.medications] == ["Doxycycline"]
+    assert [m.name for m in advice.medications] == ["Doxycycline"]
 
-    rachid = screen(suggest("Clarithromycin", "Co-trimoxazole"), by_id["P-003"])
-    assert [w.medication for w in rachid.withheld] == ["Co-trimoxazole"]
-    assert any("warfarin" in w.reason for w in rachid.cautions)
+
+def test_warfarin_is_cautioned_and_a_sulfonamide_allergy_withheld():
+    """Rachid Meziane's chart: sulfonamide allergy, anticoagulated on warfarin."""
+    rachid = profile(
+        allergies=[
+            Allergy(
+                substance="Sulfonamides",
+                reaction="widespread rash",
+                severity="moderate",
+            )
+        ],
+        medications=[Medication(name="Warfarin", indication="atrial fibrillation")],
+    )
+
+    advice = screen(suggest("Clarithromycin", "Co-trimoxazole"), rachid)
+
+    assert [w.medication for w in advice.withheld] == ["Co-trimoxazole"]
+    assert any("warfarin" in w.reason for w in advice.cautions)
 
 
 # --- ICD-10 ----------------------------------------------------------------------

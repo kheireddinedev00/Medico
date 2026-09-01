@@ -16,9 +16,12 @@ What these tests are actually protecting:
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 
+from config import ICD10_CODE_LIST
 from service.app import app
 
 client = TestClient(app)
@@ -66,12 +69,19 @@ def new_visit() -> dict:
 # --------------------------------------------------------------------------------
 
 
+def curated_codes() -> list[dict]:
+    """The curated list as it sits on disk, so the tests follow it rather than pin it."""
+    return json.loads(ICD10_CODE_LIST.read_text(encoding="utf-8"))["codes"]
+
+
 def test_health_reports_which_icd10_mode_is_active():
     body = client.get("/health").json()
     assert body["status"] == "ok"
     # The list is populated in this repo, so suggestions are validated, not shape-checked.
     assert body["icd10_mode"] == "validated"
-    assert body["icd10_codes"] == 299
+    # The count is read from the list rather than written down here: pinning the number
+    # meant that curating one new code failed two tests that had nothing to say about it.
+    assert body["icd10_codes"] == len(curated_codes())
 
 
 def test_workflow_table_is_served_rather_than_duplicated_in_the_ui():
@@ -87,7 +97,7 @@ def test_workflow_table_is_served_rather_than_duplicated_in_the_ui():
 def test_icd10_reference_is_servable_for_seeding():
     body = client.get("/reference/icd10").json()
     assert body["mode"] == "validated"
-    assert len(body["codes"]) == 299
+    assert len(body["codes"]) == len(curated_codes())
     assert any(entry["code"] == "J18.9" for entry in body["codes"])
 
 

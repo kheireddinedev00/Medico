@@ -24,38 +24,24 @@ These are enforced by code and covered by tests, not requested in a prompt:
 
 ## Running it
 
-Everything runs from the project root with the virtual environment's Python.
+Three processes, each with its own environment file. Copy the three `.env.example` files
+before starting anything.
 
-```bash
-venv/Scripts/python -m storage.cli seed --reset
-```
+| service | folder | its env | what it needs to be told |
+|---|---|---|---|
+| engine — Python, FastAPI, port 8001 | project root | `.env` | model keys, data paths |
+| API — Laravel, port 8000 | `api/` | `api/.env` | the database, and `ENGINE_URL` |
+| front end — React, Vite, port 5173 | `web/` | `web/.env` | `VITE_API_URL` |
 
-Loads the fictional test patients from `data/seed/patients.json`.
+No service holds another's address in its code. The API finds the engine through
+`ENGINE_URL`, the front end finds the API through `VITE_API_URL`, and moving either is a
+change to an env file rather than a change to a source file. Both have working defaults for
+the local setup below, so a missing `.env` does not stop you.
 
-```bash
-venv/Scripts/python -m chatbot.cli --patient P-001
-```
+### The database
 
-Starts a consultation. Add `--findings data/seed/findings_example.json` to skip typing,
-`--show-context` to see exactly what the model is told.
-
-```bash
-venv/Scripts/python -m chatbot.cli --resume V-002
-```
-
-Continues a visit that was left waiting for test results.
-
-```bash
-venv/Scripts/python -m soap.cli V-002
-```
-
-Writes the SOAP note for a visit. See [SOAP notes](#soap-notes) below.
-
-### The web application
-
-The Laravel API and the React front end need a MySQL database. The engine does not — it
-stores nothing, and the `storage/` layer above is a separate SQLite record used by the
-CLI.
+The Laravel API and the React front end need MySQL. The engine does not — it stores nothing
+between requests; the chart arrives with each call and leaves with the response.
 
 Start MySQL (XAMPP's control panel, or `C:\xampp\mysql\bin\mysqld.exe`), then create the
 database once:
@@ -72,8 +58,59 @@ The second database is for the test suite, so a test run never touches the clini
 Copy `api/.env.example` to `api/.env`, set `DB_PASSWORD`, then:
 
 ```bash
-cd api && php artisan migrate --seed && php artisan serve
+cd api && php artisan migrate --seed
 ```
+
+### Serve the API through Apache, not `artisan serve`
+
+`php artisan serve` handles **one request at a time**. An AI assessment takes about twenty
+seconds, and while it runs every other call queues behind it — the waiting-room count, the
+engine badge, the page the doctor tried to open. The application appears frozen for work it
+is not doing.
+
+XAMPP's Apache serves them in parallel. Measured here, 160 requests eight at a time: 6.98s
+through `artisan serve`, 1.93s through Apache.
+
+`PHP_CLI_SERVER_WORKERS` does not help — it is fork-based and POSIX-only, so on Windows it
+does nothing at all.
+
+The virtual host lives in `C:\xampp\apache\conf\extra\httpd-vhosts.conf`:
+
+```apache
+Listen 8000
+
+<VirtualHost *:8000>
+    DocumentRoot "C:/Users/HP/Desktop/medical-ai-assistant/api/public"
+    <Directory "C:/Users/HP/Desktop/medical-ai-assistant/api/public">
+        AllowOverride All
+        Require local
+        Options -Indexes +FollowSymLinks
+    </Directory>
+</VirtualHost>
+```
+
+Port 8000 on purpose: it is what the front end already proxies to, so nothing else changes.
+Start it with `C:\xampp\apache\bin\httpd.exe` or XAMPP's control panel, and do not run
+`php artisan serve` at the same time — they want the same port and they are alternatives.
+
+**The configuration must be cached, and this is not optional here.**
+
+```bash
+cd api && php artisan config:cache
+```
+
+Apache on Windows runs PHP as threads inside one process, on a thread-safe build. Laravel
+parses `.env` on every request, and racing that parse across threads makes a request lose
+its environment and fall back to framework defaults — it then looks for a database called
+`laravel` and returns a 500. It is rare and it is real: **one request in eighty** before
+caching, none in a hundred and sixty after. Caching the config parses `.env` once, at build
+time, and takes the race out of the request path.
+
+The cost is that `api/.env` is no longer read at runtime. **After editing it, run
+`php artisan config:cache` again** or the change will not take effect. The test suite is
+insulated from the cache by `APP_CONFIG_CACHE` in `phpunit.xml`, so `php artisan test` still
+reads its own settings and still uses the test database — without that guard a test run
+would have rebuilt the clinic's database instead of the test one.
 
 ```bash
 cd web && npm install && npm run dev
@@ -81,8 +118,9 @@ cd web && npm install && npm run dev
 
 Three processes in all: the engine on 8001, the API on 8000, the front end on 5173.
 
-Open it at `http://127.0.0.1:5173` rather than `localhost:5173`. On Windows the name
-resolves through IPv6 first and the fallback costs about 200ms on every request.
+Open the front end at `http://localhost:5173`. Vite binds to IPv6 here, so
+`http://127.0.0.1:5173` does not answer at all — that applies to the front end only; the
+API and the engine both listen on `127.0.0.1`.
 
 ### Turn OPcache on
 
@@ -102,31 +140,33 @@ opcache.validate_timestamps=1
 opcache.revalidate_freq=0
 ```
 
-`enable_cli` matters because `php artisan serve` runs through the CLI SAPI, so without it
-the dev server caches nothing. Keep `validate_timestamps` on with `revalidate_freq=0`: PHP
-then checks whether a file changed on each request and recompiles only when it has, which
-is what stops you debugging code you already edited.
+`enable_cli` is for artisan commands and the test suite; Apache uses `opcache.enable`. Keep
+`validate_timestamps` on with `revalidate_freq=0`: PHP then checks whether a file changed on
+each request and recompiles only when it has, which is what stops you debugging code you
+already edited.
 
-Restart `php artisan serve` afterwards — a running server keeps the settings it booted with.
+Restart Apache afterwards — a running server keeps the settings it booted with.
 
 ### Everything else
 
 | Command | What it does |
 |---|---|
-| `python -m storage.cli patients` | List patients |
-| `python -m storage.cli show P-001` | One patient's stored record |
-| `python -m storage.cli timeline P-001` | Visits and reports in date order |
-| `python -m storage.cli context P-001` | The exact text sent to the model |
-| `python -m chatbot.cli --patient P-001 --visits` | That patient's visits |
-| `python -m report_reader.cli extract <file>` | Report to JSON, nothing stored |
-| `python -m report_reader.cli upload <file> --patient P-001 --visit V-002` | Store a report |
-| `python -m report_reader.cli analyze <report-id>` | Analyse a stored report |
-| `python -m report_reader.cli list --patient P-001` | That patient's reports |
-| `python -m soap.cli --patient P-001 --list` | That patient's visits, with their ids |
-| `python -m soap.cli --patient P-001 --all` | A note for every visit, oldest first |
 | `python -m rag.ingest --dry-run` | What would be ingested, without touching the store |
-| `python -m rag.ingest` | Rebuild the vector store |
-| `python -m pytest -q` | The test suite |
+| `python -m rag.ingest` | Rebuild the vector store — **stop the engine first**, see below |
+| `python -m evaluation.run_eval --rules-only` | Score the triage agent against the labelled cases |
+| `python -m pytest -q` | The Python test suite |
+| `cd api && php artisan test` | The Laravel test suite (needs MySQL running) |
+| `cd api && php artisan db:seed` | Reload the fixture record |
+
+The engine keeps the reference library open for as long as it runs, so it holds a lock on
+the store's files. Rebuilding the store while it is running fails on Windows — stop the
+engine, run the ingest, start it again.
+
+There were command-line front ends for consultations, report reading, SOAP notes, triage and
+the record store. They are gone: the web application does all of it, and a second interface
+onto the same clinical layer was two things to keep in step for no gain. The layer itself is
+untouched — `chatbot/consultation.py`, `soap/note.py`, `report_reader/` and `triage/` are
+what the engine calls.
 
 ## How a consultation flows
 
@@ -148,15 +188,15 @@ closed state without a diagnosis having been chosen.
 
 ## SOAP notes
 
-Any visit can be written up as a SOAP note, at any stage, at any time:
+Any visit can be written up as a SOAP note, at any stage, at any time — from the
+consultation screen, or over the API:
 
-```bash
-venv/Scripts/python -m soap.cli V-002 --format markdown --out note.md
+```
+GET /api/consultations/{visit}/soap
 ```
 
-`--patient P-001` uses that patient's latest visit when you don't have the visit id,
-`--all` writes one note per visit, and `--format json` returns the note as structured
-data for a web interface. `--no-ai` leaves the assistant's differential out.
+The engine builds it at `POST /soap` (`soap/note.py`), Laravel stores the edited version,
+and `GET /api/consultations/{visit}/soap/saved` returns what was saved.
 
 Three things are true of every note:
 
@@ -193,8 +233,8 @@ Two properties define it, and they are the mirror image of each other:
 Because the service does the writing nowhere, a transition response carries a `persist`
 flag: the engine's own answer to whether this visit belongs in the record yet. It is false
 until a diagnosis is chosen, so a consultation the physician abandons leaves nothing
-behind — the same rule the CLI follows, travelling over HTTP rather than being restated by
-the caller.
+behind — the engine's own rule, travelling over HTTP rather than being restated by the
+caller.
 
 `GET /reference/workflow` serves the state machine so a front end can grey out what the
 engine would refuse, rather than keeping its own copy of the transition table to drift
@@ -209,26 +249,15 @@ A separate agent, in `triage/`. It decides who in the waiting room is seen first
 shares the record models and the model plumbing with the assistant and nothing else —
 delete the directory and the consultation flow is untouched.
 
+It runs when a nurse records vitals in the waiting room. The engine exposes it at
+`POST /triage/assess`, one patient per call, and `GET /triage/rules` reports which rule set
+is loaded and whether it has been verified.
+
+The labelled cases in `data/triage_cases/cases.json` are what the evaluation scores against:
+
 ```bash
-venv/Scripts/python -m triage.cli assess data/triage_cases/cases.json
+venv/Scripts/python -m evaluation.run_eval --rules-only
 ```
-
-That fails, deliberately: `cases.json` holds 32 cases and `assess` takes one. Use `room`
-for a queue:
-
-```bash
-venv/Scripts/python -m triage.cli room data/triage_cases/cases.json
-```
-
-| Command | What it does |
-|---|---|
-| `python -m triage.cli assess <file>` | Triage one patient |
-| `python -m triage.cli assess <file> --rules-only` | The same, without calling the model |
-| `python -m triage.cli assess <file> --patient P-001` | With that patient's record |
-| `python -m triage.cli assess <file> --json` | The full result, as a backend receives it |
-| `python -m triage.cli room <files>` | Triage several patients and order them |
-| `python -m triage.cli rules --flags` | Check the rule set loads; list the red flags |
-| `python -m evaluation.run_eval --rules-only` | Score the agent against the labelled cases |
 
 ### How it decides
 
@@ -283,7 +312,7 @@ clinician, which is deliberate over-triage and the honest cost of admitting the 
 does not apply.
 
 **The thresholds are transcribed and not yet verified.** `verification_status` in the
-rule file says so, `triage.cli rules` prints a warning, and a test asserts the warning is
+rule file says so, `GET /triage/rules` reports it, and a test asserts the admission is
 still there. Check them cell-by-cell against the RCP chart before the defence.
 
 ### Evaluation
@@ -418,17 +447,46 @@ To extend it, add entries of the form:
 
 `synonyms` is optional and only helps matching — put words a doctor would type that are
 not in the official description. Emptying the `codes` array reverts the assistant to
-checking code *format* only, and the CLI says which mode it is in.
+checking code *format* only. `GET /reference/icd10` reports which mode it is in.
+
+Keep the file grouped by ICD chapter, the way it already is: all the J codes, then A, U, C,
+I, R, T. Nothing enforces it and nothing breaks if you don't — the search orders by code
+anyway — but a chapter split in two is hard to read and easy to duplicate into.
+
+**Adding a code takes three steps, and skipping the third is the one that bites.** The
+assistant validates against the file; the doctor's search box reads the database, and they
+are not the same thing.
+
+1. Add it to `data/icd10_respiratory.json`, then restart the engine so it reloads the list.
+2. Copy the file to `api/database/seed/icd10_respiratory.json` — the backend's own copy, so
+   seeding needs nothing outside `api/`.
+3. Load it into the database:
+
+```bash
+cd api && php artisan db:seed --class=Icd10CodeSeeder
+```
+
+That seeder does the code list and nothing else. Run it as often as you like: it is an
+upsert keyed on the code, so it adds what is new and refreshes what changed. Use it rather
+than a full `php artisan db:seed`, which also resets the fixture patients to their file
+state and would discard any edits made to those charts through the application.
+
+It never removes codes. One deleted from the file stays in the table, because a past visit
+coded with it would otherwise become unreadable.
 
 ### Test patients
 
-Edit `data/seed/patients.json` and re-run `python -m storage.cli seed --reset`. The file
+Edit `api/database/seed/patients.json` and re-run `cd api && php artisan db:seed`. The file
 is the master copy; the database is a loaded copy of it.
+
+It lives inside the backend on purpose. Seeding reads nothing outside `api/`, so the backend
+can be checked out or deployed on its own and still populate its own database with no other
+service running.
 
 ## Architecture
 
 ```
-chatbot/          talking to the model — prompt, one assessment call, the CLI.
+chatbot/          talking to the model — prompt, one assessment call.
                   llm.py is shared plumbing: both AI modules call run_structured
 clinical/         clinical reasoning — differential, ICD-10, investigations,
                   medications + safety screen, consultation state machine, session
@@ -438,7 +496,9 @@ patient/          the record — profile, visit, report, and the context builder
 rag/              the reference library — curation, chunking, embedding, retrieval
 report_reader/    reports — extraction (transcription only) and analysis (separate)
 soap/             SOAP notes — a rendering of the record, no reasoning, standalone
-storage/          SQLite persistence behind repository protocols
+storage/          the repository protocols, and a SQLite implementation of them.
+                  Nothing in the running system uses the SQLite side any more —
+                  the backend persists. It is kept as the test suite's store
 service/          the engine over HTTP — stateless, stores nothing, adds no logic
 evaluation/       the triage evaluation harness — synthetic cases only
 ```
@@ -459,8 +519,10 @@ route is a thin wrapper when it is wanted.
 Two boundaries are load-bearing:
 
 **`storage/repository.py` is a seam.** The clinical layer depends only on those
-protocols, so replacing SQLite with a web backend means writing one adapter and changing
-nothing else.
+protocols, so replacing SQLite with a web backend meant writing one adapter and changing
+nothing else — `service/repositories.py` is that adapter, and it is 80 lines. Both
+implementations still exist, which is the demonstration: the same clinical code runs against
+a database and against a dictionary filled from an HTTP request.
 
 **Extraction and analysis are separate.** `report_reader/extractor.py` transcribes and
 interprets nothing, so the stored JSON stays a faithful record of what was printed.
@@ -470,7 +532,19 @@ describes what the flags show.
 
 ## Configuration
 
-Copy `.env.example` to `.env` and add an OpenRouter API key. Defaults use a free model.
+Three services, three environment files, none of them in the repository:
+
+| File | Example | Configures |
+|---|---|---|
+| `.env` | `.env.example` | the engine — model keys, data paths, `SERVICE_API_KEY` |
+| `api/.env` | `api/.env.example` | the API — database credentials, `ENGINE_URL`, `ENGINE_KEY` |
+| `web/.env` | `web/.env.example` | the front end — `VITE_API_URL` |
+
+`ENGINE_KEY` on the Laravel side must match `SERVICE_API_KEY` on the engine's, and an empty
+value on both means no check — only safe while the port is bound to localhost.
+
+The rest of this section is the engine's file. Copy `.env.example` to `.env` and add an
+OpenRouter API key. Defaults use a free model.
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -498,7 +572,8 @@ Copy `.env.example` to `.env` and add an OpenRouter API key. Defaults use a free
   absent**, so the assistant will suggest them from clinical findings with no citation.
 - **The triage thresholds are transcribed, not verified.** The NEWS2 tables in
   `data/triage_rules.json` were written from the published scale and have not been
-  checked cell-by-cell against the RCP document. The file says so and the CLI warns.
+  checked cell-by-cell against the RCP document. The file says so and `GET /triage/rules`
+  reports it.
 - **The triage red-flag list is a phrase list.** It catches "chest pain" and misses "my
   chest feels like someone is sitting on it" — which is what the AI layer is for, and
   why that layer can raise a priority. Negation is scoped to a short window before the

@@ -26,8 +26,6 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM
 # The local SQLite file standing in for the production database. It is the source of
 # truth for patient profiles and visits; the assistant holds no patient state itself.
 DB_PATH = str(BASE_DIR / os.getenv("DB_PATH", "data/clinic.db"))
-# Fixture patients, so the clinical layer can be exercised before a real database exists.
-SEED_FILE = BASE_DIR / "data" / "seed" / "patients.json"
 # How many past encounters are summarised into the prompt. Enough for continuity of
 # care without letting an old chart crowd out the current consultation.
 CONTEXT_RECENT_VISITS = int(os.getenv("CONTEXT_RECENT_VISITS", "3"))

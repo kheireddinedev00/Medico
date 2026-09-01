@@ -1,5 +1,5 @@
 {
-  "_note": "Fictional test patients. No real patient data. Edit freely and re-run `python -m storage.cli seed --reset` to load your own cases. Every key here must match the Pydantic models in patient/profile.py and patient/visit.py exactly — an unknown key is rejected rather than ignored, on purpose.",
+  "_note": "Fictional test patients. No real patient data. Edit freely and re-run `php artisan db:seed` to load your own cases. Every key here must match the Pydantic models in patient/profile.py and patient/visit.py exactly — an unknown key is rejected rather than ignored, on purpose.",
   "patients": [
     {
       "id": "P-001",

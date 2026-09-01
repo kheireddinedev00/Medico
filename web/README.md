@@ -1,16 +1,40 @@
-# React + Vite
+# The front end
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 and Vite. The doctor-facing interface for the clinical decision support system:
+waiting room and triage, the consultation, reports, the reference library, staff admin.
 
-Currently, two official plugins are available:
+## Running it
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install && npm run dev
+```
 
-## React Compiler
+It needs the Laravel API on port 8000 and the engine on 8001. See the root `README.md` for
+starting those.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Configuration
 
-## Expanding the Oxlint configuration
+Copy `.env.example` to `.env`. Both settings have working defaults, so the site runs without
+one — they exist so that moving a service is a configuration change, not a code change.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+| Setting | Default | Meaning |
+|---|---|---|
+| `VITE_API_URL` | `/api` | What the browser calls. A relative path keeps the front end and the API on one origin, so there is no CORS to configure and the token is never sent cross-site. Set an absolute URL when they are deployed apart. |
+| `VITE_API_PROXY_TARGET` | `http://127.0.0.1:8000` | Where the dev server forwards `/api`. Development only — the built site has no proxy. |
+
+`src/api.js` is the only file that builds a request URL, and `vite.config.js` the only one
+that knows about the proxy. Nothing else needs to change to move the backend.
+
+## Deploying it apart from the API
+
+`npm run build` writes `dist/`, which is static files and no proxy. If the API is on another
+host, set `VITE_API_URL` to its absolute URL **before building** — Vite bakes the value into
+the bundle — and then on the Laravel side add CORS and put the front end's origin in
+`config/sanctum.php`.
+
+## A note on this folder
+
+It began as a test harness for the API and grew into the interface. `src/api.js` is the part
+worth keeping if it is ever replaced: it is the shape of the contract, including the two
+things a client has to get right — the `persisted` flag, and that a 409 is a clinical
+refusal written for a doctor to read, not an error to hide.

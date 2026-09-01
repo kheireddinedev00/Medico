@@ -168,8 +168,9 @@ class ConsultationSession:
         usable = [r for r in reports if r.is_analysed]
         if not usable:
             raise ConsultationError(
-                "None of those reports have been analysed. Run the analysis first: "
-                "python -m report_reader.cli analyze <report-id>"
+                "None of those reports have been analysed. Analyse them first — "
+                "uploading transcribes a report, analysing is the separate step that "
+                "makes it something the assistant may reason over."
             )
         summary = "\n\n".join(
             f"{report.label()}\n{report.analysis.to_summary_text()}" for report in usable

@@ -2,82 +2,37 @@
 
 namespace Database\Seeders;
 
-use App\Models\Icd10Code;
 use App\Models\Patient;
 use App\Models\User;
 use App\Models\Visit;
+use Database\Seeders\Concerns\ReadsSeedFiles;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * Loads the fixture record from the engine's own data files.
+ * Loads the fixture record from the backend's own seed files.
  *
- * The files in `data/` are read directly rather than through the HTTP service, so seeding
- * works before the engine is running and during CI. They remain the master copy — this
- * database is a loaded copy of them, exactly as the engine's own SQLite store is.
+ * The files live in `database/seed/`, inside this application. That is deliberate: seeding
+ * reaches for nothing outside `api/`, so the backend can be deployed, zipped or checked out
+ * on its own and `php artisan db:seed` still works with no other service running.
  *
- * Read them, do not edit them from here. Anything written back into `data/seed/patients.json`
- * would diverge from what the CLI loads, and then there would be two fixture sets.
+ * `patients.json` is the master copy — it lives here and nowhere else.
+ *
+ * The ICD-10 list is loaded by `Icd10CodeSeeder`, which is separate so that curating a code
+ * does not require running this one — everything below resets the fixture patients to their
+ * file state, and a doctor's own edits to those charts would go with it.
  */
 class ClinicalRecordSeeder extends Seeder
 {
+    use ReadsSeedFiles;
+
     public function run(): void
     {
-        $this->seedIcd10Codes();
+        $this->call(Icd10CodeSeeder::class);
         $this->seedUsers();
         $this->seedPatientsAndVisits();
     }
 
-    private function enginePath(string $relative): string
-    {
-        return base_path('../'.$relative);
-    }
-
-    private function readJson(string $relative): array
-    {
-        $path = $this->enginePath($relative);
-
-        if (! is_file($path)) {
-            $this->command?->warn("Skipped: {$relative} not found at {$path}");
-
-            return [];
-        }
-
-        return json_decode(file_get_contents($path), true) ?? [];
-    }
-
-    /**
-     * The curated respiratory subset, copied from the engine's list.
-     *
-     * With this populated the assistant's codes are validated against it rather than merely
-     * shape-checked, and the description a physician sees comes from here rather than from
-     * the model.
-     */
-    private function seedIcd10Codes(): void
-    {
-        $data = $this->readJson('data/icd10_respiratory.json');
-        $codes = $data['codes'] ?? [];
-
-        foreach (array_chunk($codes, 200) as $chunk) {
-            Icd10Code::upsert(
-                array_map(fn ($entry) => [
-                    'code' => $entry['code'],
-                    'description' => $entry['description'],
-                    'synonyms' => json_encode($entry['synonyms'] ?? []),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ], $chunk),
-                ['code'],
-                ['description', 'synonyms', 'updated_at'],
-            );
-        }
-
-        $this->command?->info('ICD-10 codes: '.count($codes));
-    }
-
-    /**
-     * Demo accounts. Development only — the passwords are in the repository.
-     */
     private function seedUsers(): void
     {
         $accounts = [
@@ -103,7 +58,7 @@ class ClinicalRecordSeeder extends Seeder
 
     private function seedPatientsAndVisits(): void
     {
-        $data = $this->readJson('data/seed/patients.json');
+        $data = $this->readJson('patients.json');
 
         foreach ($data['patients'] ?? [] as $record) {
             $smoking = $record['smoking'] ?? [];

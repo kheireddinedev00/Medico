@@ -331,8 +331,8 @@ def _check_escalation(escalation: Escalation) -> list[str]:
 def check_consistency(rules: RuleSet) -> list[str]:
     """Every internal problem with a rule set, as a list of sentences.
 
-    Returned rather than raised so `python -m triage.cli rules` can print them all and
-    a test can assert on them individually.
+    Returned rather than raised so `GET /triage/rules` can report them all and a test
+    can assert on them individually.
     """
     problems: list[str] = []
     tables = rules.news2.parameters
