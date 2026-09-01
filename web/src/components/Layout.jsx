@@ -29,6 +29,33 @@ export default function Layout() {
   const [engine, setEngine] = useState(null)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('medico.sidebar') === 'collapsed')
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  /*
+   * Whether there is enough room for a sidebar at all. 900px is the drawer breakpoint in
+   * `index.css`; if that moves, this moves with it.
+   */
+  const [wide, setWide] = useState(() => window.matchMedia('(min-width: 901px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 901px)')
+    // Read the query rather than trust the event: `resize` is here because a viewport that
+    // changes without firing the media query's own `change` leaves the sidebar in the mode
+    // the previous width called for. React drops the re-render when the boolean is
+    // unchanged, so the common case costs one comparison.
+    const sync = () => {
+      setWide(mq.matches)
+      // A drawer left open on a phone must not still be open if the window grows past the
+      // breakpoint and back again — the sidebar is a fixed column up there, and the state
+      // that says "drawer showing" has nothing to describe.
+      if (mq.matches) setMobileOpen(false)
+    }
+    sync()
+    mq.addEventListener('change', sync)
+    window.addEventListener('resize', sync)
+    return () => {
+      mq.removeEventListener('change', sync)
+      window.removeEventListener('resize', sync)
+    }
+  }, [])
   const [waiting, setWaiting] = useState(null)
 
   /*
@@ -81,6 +108,25 @@ export default function Layout() {
   // Closed on navigation, or the drawer stays over the page it just moved to.
   useEffect(() => { setMobileOpen(false) }, [pathname])
 
+  /*
+   * While the drawer is open it behaves like the dialog it visually is: Escape closes it,
+   * and the page underneath does not scroll away behind it. Without this the only way out
+   * was to navigate somewhere — tapping the page did nothing, and the content kept
+   * scrolling under a panel covering two thirds of the screen.
+   */
+  useEffect(() => {
+    if (!mobileOpen) return
+
+    const onKey = (e) => e.key === 'Escape' && setMobileOpen(false)
+    window.addEventListener('keydown', onKey)
+    document.body.classList.add('drawer-open')
+
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.classList.remove('drawer-open')
+    }
+  }, [mobileOpen])
+
   const links = [
     { to: '/dashboard', label: 'Dashboard', icon: '◧', roles: ['doctor', 'nurse', 'admin'] },
     { to: '/waiting-room', label: 'Waiting room', icon: '⏱', roles: ['nurse', 'doctor', 'admin'], count: waiting },
@@ -92,19 +138,33 @@ export default function Layout() {
 
   const page = pageFor(pathname)
 
+  /*
+   * Collapsing is a desktop affordance, and the preference outlives the screen it was set
+   * on. Applied on a phone it made the drawer open 92px wide with every label switched off
+   * — six unlabelled glyphs, and the button that would widen them is meant for a mouse.
+   * The choice is still remembered; it simply does not apply at a width where the sidebar
+   * is a drawer that is either shut or fully open.
+   */
+  const showCollapsed = collapsed && wide
+
   return (
-    <div className={`shell${collapsed ? ' collapsed' : ''}`}>
+    <div className={`shell${showCollapsed ? ' collapsed' : ''}`}>
       <div className="aurora" aria-hidden="true"><span /><span /><span /></div>
 
-      <aside className={`sidebar${collapsed ? ' collapsed' : ''}${mobileOpen ? ' open' : ''}`}>
+      {/* Tapping the page beside an open drawer closes it, the way a dialog behaves. */}
+      {mobileOpen && (
+        <div className="drawer-scrim" onClick={() => setMobileOpen(false)} aria-hidden="true" />
+      )}
+
+      <aside className={`sidebar${showCollapsed ? ' collapsed' : ''}${mobileOpen ? ' open' : ''}`}>
         {/* On the seam, half over each side, exactly as the prototype has them. */}
         <button
           className="rail-btn rail-collapse"
           onClick={toggleCollapse}
-          aria-label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
-          title={collapsed ? 'Expand' : 'Collapse'}
+          aria-label={showCollapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
+          title={showCollapsed ? 'Expand' : 'Collapse'}
         >
-          {collapsed ? '›' : '‹'}
+          {showCollapsed ? '›' : '‹'}
         </button>
 
         <button
@@ -129,7 +189,7 @@ export default function Layout() {
             key={l.to}
             to={l.to}
             className={({ isActive }) => `nav-item${isActive ? ' on' : ''}`}
-            title={collapsed ? l.label : undefined}
+            title={showCollapsed ? l.label : undefined}
           >
             <span className="nav-icon" aria-hidden="true">{l.icon}</span>
             <span className="nav-label">{l.label}</span>
@@ -145,7 +205,7 @@ export default function Layout() {
           your account.
         */}
         <div className="sidebar-foot">
-          <button className="logout-btn" onClick={signOut} title={collapsed ? 'Sign out' : undefined}>
+          <button className="logout-btn" onClick={signOut} title={showCollapsed ? 'Sign out' : undefined}>
             <span className="nav-icon" aria-hidden="true">⏻</span>
             <span className="nav-label">Sign out</span>
           </button>

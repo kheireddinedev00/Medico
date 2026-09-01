@@ -858,16 +858,18 @@ th.right, td.right { text-align: right; }
 /* ---------------------------------------------------------------- narrow screens */
 
 @media (max-width: 900px) {
-  .sidebar {
-    position: fixed; z-index: 60; left: 0; top: 0;
-    transform: translateX(-100%); transition: transform .2s ease;
-  }
-  .sidebar.open { transform: translateX(0); }
+  /* Flush to the edge rather than the desktop panel's inset float. How it moves, and what
+     it sits above, are set with the rest of the drawer further down this file. */
+  .sidebar { left: 0; top: 0; height: 100vh; border-radius: 0 26px 26px 0; }
   .content { padding: 16px; }
   .consultation { flex-direction: column; }
   .side { width: 100%; flex-basis: auto; height: auto; position: static; }
   .panel { padding: 16px; }
 }
+
+/* The drawer's scrim is a phone-width thing; see the drawer block below. */
+.drawer-scrim { display: none; }
+@keyframes scrimIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ---------------------------------------------------------------- profile menu */
 
@@ -1337,6 +1339,31 @@ button:hover, .glass:hover, .logout-btn:hover {
   /* The edge buttons belong to a panel that is off-screen; the drawer has its own way in. */
   .sidebar:not(.open) .rail-btn { display: none; }
 
+  /* Collapsing is meaningless here — the drawer is shut or it is open — and the button did
+     something worse than nothing: it shrank the open drawer to a strip of icons. The theme
+     switch takes its place on the rail, since this is the only control that carries it. */
+  .rail-collapse { display: none; }
+  .rail-theme { top: 26px; }
+
+  /*
+   * Tapping the page beside the drawer closes it.
+   *
+   * Under the drawer, over everything else. Without it the drawer could only be dismissed
+   * by navigating somewhere, so a doctor who opened it to look and changed their mind had
+   * to visit a page they did not want.
+   */
+  .drawer-scrim {
+    display: block;
+    position: fixed; inset: 0; z-index: 150;
+    background: rgba(2, 6, 23, .55);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    animation: scrimIn .3s ease;
+  }
+
+  /* The page underneath holds still while the drawer is over it. */
+  body.drawer-open { overflow: hidden; }
+
   .main, .shell.collapsed .main { margin-left: 0; }
   .topbar { padding: 18px var(--gutter) 14px var(--gutter); }
   .content { padding: 8px var(--gutter) 18px; }
@@ -1426,8 +1453,9 @@ button:hover, .glass:hover, .logout-btn:hover {
 .backdrop { z-index: 900; }
 .modal { z-index: 901; }
 
-/* The sidebar is a fixed panel at z-index 100; the backdrop must cover that too. */
-.sidebar { z-index: 100; }
+/* The sidebar is a fixed panel at z-index 100 — see `.sidebar` above, which is where that
+   is set. Restating it here also outranked the drawer's own z-index, because a later rule
+   of equal specificity beats one inside a media query. `.backdrop` at 900 covers both. */
 
 /* While a dialog is open the page behind it does not scroll away underneath. */
 body.modal-open { overflow: hidden; }
