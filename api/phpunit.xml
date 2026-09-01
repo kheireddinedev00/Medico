@@ -19,6 +19,18 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- Never let a test run read the cached configuration.
+
+             The application caches its config so that Apache's worker threads do not each
+             parse `.env` (see the README — racing that parse under a threaded MPM is what
+             made one request in eighty fall back to framework defaults). But a cached
+             config also outranks every `<env>` below it, including the database name — and
+             these tests use RefreshDatabase, so a test run would have migrated the clinic's
+             own database from scratch instead of the test one.
+
+             Pointing the cache at a path that is never written keeps the values here
+             authoritative. -->
+        <env name="APP_CONFIG_CACHE" value="bootstrap/cache/config.testing-never-written.php"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

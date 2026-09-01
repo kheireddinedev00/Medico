@@ -11,6 +11,8 @@ reasoning across several candidate conditions needs.
 or there is nothing to diversify between.
 """
 
+from functools import lru_cache
+
 from langchain_chroma import Chroma
 
 from config import CHROMA_PERSIST_DIR
@@ -21,7 +23,20 @@ from rag.embeddings import get_embeddings
 FETCH_MULTIPLIER = 4
 
 
+@lru_cache(maxsize=1)
 def get_vectorstore() -> Chroma:
+    """The reference library, opened once.
+
+    Opening it means loading the embedding model and connecting to the store, and neither
+    depends on the request — this used to be rebuilt for every assessment. Cached for the
+    same reason `get_embeddings` is, and it holds no per-request state: `add_document` and
+    `remove_document` write through this same object, so a cached handle sees their changes
+    immediately.
+
+    One caveat inherited from Chroma on Windows: the store's files stay locked while a
+    process holds it open. A cached handle means the engine holds it for as long as it
+    runs, so rebuild the store with `python -m rag.ingest` while the engine is stopped.
+    """
     return Chroma(
         persist_directory=CHROMA_PERSIST_DIR,
         embedding_function=get_embeddings(),

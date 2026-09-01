@@ -30,6 +30,8 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
+import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -86,6 +88,31 @@ from triage.service import triage as run_triage
 # a shared secret is the floor, not the ceiling — bind it to localhost as well.
 SERVICE_API_KEY = os.getenv("SERVICE_API_KEY", "")
 
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    """Load the embedding model before a doctor needs it.
+
+    It is cached for the life of the process, so it is loaded exactly once either way —
+    the only question is who waits the eleven seconds for it. Left alone that is whoever
+    asks for the first assessment after a restart, which is precisely the worst moment.
+
+    In a thread, so a slow load does not hold up the port; and failures are swallowed
+    because this is a warm-up, not a dependency. If the model cannot be built here it
+    fails the same way on first use, where the error belongs to a request and can be
+    reported to the caller.
+    """
+    def warm() -> None:
+        try:
+            from rag.retriever import get_vectorstore
+
+            get_vectorstore()
+        except Exception:  # noqa: BLE001 - a warm-up must never stop the engine starting
+            pass
+
+    threading.Thread(target=warm, name="warm-reference-library", daemon=True).start()
+    yield
+
+
 app = FastAPI(
     title="Respiratory CDSS engine",
     description=(
@@ -93,6 +120,7 @@ app = FastAPI(
         "never decides. The caller owns the record."
     ),
     version="1.0.0",
+    lifespan=_lifespan,
 )
 
 
