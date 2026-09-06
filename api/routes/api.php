@@ -8,6 +8,7 @@ use App\Http\Controllers\PatientIntakeController;
 use App\Http\Controllers\ReferenceDocumentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\WaitingRoomController;
 use App\Engine\EngineClient;
@@ -154,6 +155,16 @@ Route::middleware('auth:sanctum')->group(function () {
         // Deactivate, never delete: their name is on visits, notes and audit rows.
         Route::delete('/{user}', [StaffController::class, 'deactivate']);
     });
+
+    /*
+     * How the clinic is running: distributions, trends and rates.
+     *
+     * The administrator's alone. The dashboard's counts are answered for every role because
+     * each one needs its own; this is the shape of the whole clinic — who is waiting longest,
+     * which doctor is carrying what, how often the assistant was right — and that is a
+     * management view rather than a clinical one.
+     */
+    Route::get('/statistics', [StatisticsController::class, 'index'])->middleware('role:admin');
 
     /*
      * Dashboard figures, answered differently for each role.

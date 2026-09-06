@@ -133,6 +133,7 @@ export default function Layout() {
     { to: '/in-progress', label: 'In progress', icon: '◐', roles: ['doctor', 'admin'] },
     { to: '/patients', label: 'Patients', icon: '☰', roles: ['nurse', 'doctor', 'admin', 'patient'] },
     { to: '/references', label: 'References', icon: '❐', roles: ['doctor', 'nurse', 'admin'] },
+    { to: '/statistics', label: 'Statistics', icon: '◔', roles: ['admin'] },
     { to: '/staff', label: 'Staff', icon: '⚇', roles: ['admin'] },
   ].filter((l) => l.roles.includes(user.role))
 
@@ -286,6 +287,10 @@ function pageFor(pathname) {
     '/references': {
       title: 'Reference library',
       lede: 'What the assistant is allowed to reason from, and what your clinic has added.',
+    },
+    '/statistics': {
+      title: 'Statistics',
+      lede: 'How the clinic is running — where the time goes, and how often the assistant was right.',
     },
     '/staff': {
       title: 'Staff',

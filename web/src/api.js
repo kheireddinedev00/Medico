@@ -88,6 +88,9 @@ export const api = {
   // did not suggest, but still cannot invent a code.
   searchIcd10: (search = '') => get(`/icd10?search=${encodeURIComponent(search)}`),
   engineHealth: () => get('/engine/health'),
+  // How the clinic is running — distributions and rates, not the dashboard's counts.
+  // Administrator only; the API refuses anyone else.
+  statistics: () => get('/statistics'),
 
   // --- record ---
   patients: (search = '') => get(`/patients?search=${encodeURIComponent(search)}`),

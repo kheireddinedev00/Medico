@@ -21,6 +21,7 @@ import PatientProfilePage from './pages/PatientProfilePage'
 import InProgressPage from './pages/InProgressPage'
 import ConsultationPage from './pages/ConsultationPage'
 import StaffPage from './pages/StaffPage'
+import StatisticsPage from './pages/StatisticsPage'
 import ReferencesPage from './pages/ReferencesPage'
 
 export default function App() {
@@ -74,6 +75,10 @@ function Router() {
         <Route
           path="/staff"
           element={user.role === 'admin' ? <StaffPage /> : <Navigate to={home} replace />}
+        />
+        <Route
+          path="/statistics"
+          element={user.role === 'admin' ? <StatisticsPage /> : <Navigate to={home} replace />}
         />
         <Route path="*" element={<Navigate to={home} replace />} />
       </Route>

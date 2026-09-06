@@ -687,10 +687,12 @@ th.right, td.right { text-align: right; }
 }
 @keyframes columnGrow { from { transform: scaleY(0); } to { transform: none; } }
 .trend .bar.alt { background: var(--purple); opacity: .75; }
-.trend-axis { display: flex; gap: 5px; margin-top: 6px; }
+.trend-axis { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; }
+/* Sized to their own text, so `space-between` can put the first at the left edge, the last
+   at the right, and the middle one over the middle. `flex: 1` centred each in a third of
+   the axis instead, which put the first date a tenth of the way along. */
 .trend-axis span {
-  flex: 1; text-align: center; font-size: .6rem; color: var(--faint);
-  white-space: nowrap; overflow: hidden;
+  flex: 0 0 auto; font-size: .6rem; color: var(--faint); white-space: nowrap;
 }
 .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .78rem; color: var(--muted); }
 .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 5px; }
@@ -1632,4 +1634,343 @@ select:focus {
    aligned, which is the part that was wrong before. */
 @container page (max-width: 460px) {
   .listrow.row { flex-direction: column; align-items: flex-start; }
+}
+
+/* ---------------------------------------------------------------- statistics */
+
+/*
+ * The statistics screen reuses the dashboard's panels, bar lists and trend. What is added
+ * here is the ring, the stacked track, and the small type that carries each panel's
+ * caveats — the parts a distribution needs and a headline number does not.
+ */
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 18px;
+  margin-bottom: 26px;
+  align-items: start;
+}
+
+/* Explains what the panel is measuring, before the reader interprets the shape. */
+.chart-lede {
+  font-size: .8rem; color: var(--muted); line-height: 1.55;
+  margin: -4px 0 16px;
+}
+
+/* Where a panel says what its own figure does not: a caveat, or the sample it rests on. */
+.chart-foot {
+  font-size: .76rem; color: var(--muted); line-height: 1.6;
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);
+}
+.chart-foot strong { color: var(--text); }
+
+/* The sample size beside a row, so a median over one patient cannot read as a finding. */
+.barnote { font-style: normal; font-weight: 400; font-size: .72rem; color: var(--faint); }
+
+/* Two tones the dashboard never needed. */
+.barfill.purple { background: var(--purple); }
+.barfill.faint  { background: var(--faint); }
+
+/* Segments of one stacked bar share a track, so only the outer ends stay round. */
+.bartrack.stacked { display: flex; }
+.bartrack.stacked .barfill { border-radius: 0; }
+.bartrack.stacked .barfill:first-child { border-radius: 999px 0 0 999px; }
+.bartrack.stacked .barfill:last-child { border-radius: 0 999px 999px 0; }
+
+/* --- the ring --- */
+
+.donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+
+/* Rotated so the first slice starts at twelve o'clock rather than three. */
+.donut { width: 144px; height: 144px; flex: none; transform: rotate(-90deg); }
+
+.donut-track { fill: none; stroke: var(--sunken); stroke-width: 18; }
+.donut-slice {
+  fill: none; stroke: var(--primary); stroke-width: 18;
+  transition: stroke-width .2s ease;
+}
+.donut-slice:hover { stroke-width: 22; }
+
+.donut-slice.bad { stroke: var(--bad); }
+.donut-slice.warn { stroke: var(--warn); }
+.donut-slice.ok { stroke: var(--ok); }
+.donut-slice.info { stroke: var(--info); }
+.donut-slice.ai { stroke: var(--ai); }
+.donut-slice.purple { stroke: var(--purple); }
+.donut-slice.faint { stroke: var(--faint); }
+
+/* The text rides back the other way, so the total reads level. */
+.donut-total, .donut-unit {
+  text-anchor: middle; transform: rotate(90deg); transform-origin: 80px 80px;
+}
+.donut-total { fill: var(--text); font-size: 27px; font-weight: 800; }
+.donut-unit { fill: var(--faint); font-size: 9.5px; font-weight: 600; letter-spacing: .04em; }
+
+/*
+ * The ring's own legend, listed rather than laid in a row: these labels are sentences
+ * ("Left before being seen"), and every one carries a count and a share, because a reader
+ * who cannot separate the colours still has to be able to read the chart.
+ */
+.donut-legend { list-style: none; display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 150px; }
+.donut-legend > li { display: flex; align-items: center; gap: 9px; font-size: .78rem; }
+.donut-legend i {
+  width: 11px; height: 11px; border-radius: 3px; flex: none;
+  background: var(--primary);
+}
+.donut-legend i.bad { background: var(--bad); }
+.donut-legend i.warn { background: var(--warn); }
+.donut-legend i.ok { background: var(--ok); }
+.donut-legend i.info { background: var(--info); }
+.donut-legend i.ai { background: var(--ai); }
+.donut-legend i.purple { background: var(--purple); }
+.donut-legend i.faint { background: var(--faint); }
+
+.donut-legend-label { color: var(--text-dim); flex: 1; }
+.donut-legend-value { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.donut-legend-value em { color: var(--faint); font-weight: 400; font-style: normal; }
+
+/* The stacked legend borrows the trend's, which colours by class rather than inline. */
+.legend i.bad { background: var(--bad); }
+.legend i.warn { background: var(--warn); }
+.legend i.ok { background: var(--ok); }
+.legend i.info { background: var(--info); }
+.legend i.ai { background: var(--ai); }
+.legend i.purple { background: var(--purple); }
+.legend i.faint { background: var(--faint); }
+
+/* A panel split across a page break is a chart with half its bars missing. */
+@media print {
+  .chart-grid { display: block; }
+  .chart-grid .card { break-inside: avoid; margin-bottom: 12px; }
+  .donut-slice { stroke: #666 !important; }
+  .donut-track { stroke: #e5e5e5 !important; }
+  .donut-total { fill: #111 !important; }
+  .chart-lede, .chart-foot { color: #333 !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .donut-slice { transition: none; }
+}
+
+/* ------------------------------------------------------------------ the line chart
+ *
+ * Marks are thin and the furniture is recessive: a 2px line, a hairline grid in the border
+ * colour, axis text in the faintest ink the theme has. The reader should see the shape
+ * first and the scaffolding only when they go looking for it.
+ *
+ * The y-axis starts at zero — enforced in the component, not here — so nothing in this
+ * block can be used to crop a trend into looking steeper than it is.
+ */
+
+.linechart { position: relative; }
+
+.line-svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+.line-svg .grid { stroke: var(--border); stroke-width: 1; }
+.line-svg .axis-y { fill: var(--faint); font-size: 10px; text-anchor: end; }
+.line-svg .axis-x { fill: var(--faint); font-size: 10px; }
+
+.line-svg .line {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.line-svg .line.purple { stroke: var(--purple); }
+.line-svg .line.ai { stroke: var(--ai); }
+.line-svg .line.info { stroke: var(--info); }
+
+/* The dashed rule follows the pointer; the dot sits on the value it is reporting. Both
+   appear only on hover, because a marker on all thirty days is a dotted line. */
+.line-svg .rule { stroke: var(--faint); stroke-width: 1; stroke-dasharray: 3 4; opacity: .7; }
+
+/* A ring of the surface colour, so a dot landing on the line stays a separate mark. */
+.line-svg .dot { fill: var(--primary); stroke: var(--elevated); stroke-width: 2; }
+.line-svg .dot.purple { fill: var(--purple); }
+.line-svg .dot.ai { fill: var(--ai); }
+.line-svg .dot.info { fill: var(--info); }
+
+.chart-tip {
+  position: absolute;
+  top: 2px;
+  z-index: 3;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--elevated);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .28);
+  font-size: .74rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.chart-tip strong { color: var(--text); font-size: .76rem; }
+.chart-tip b { color: var(--text); }
+.chart-tip i {
+  width: 9px; height: 9px; border-radius: 3px;
+  display: inline-block; margin-right: 6px;
+  background: var(--primary);
+}
+.chart-tip i.purple { background: var(--purple); }
+.chart-tip i.ai { background: var(--ai); }
+.chart-tip i.info { background: var(--info); }
+
+/* Past two-thirds of the width the tooltip changes sides rather than being clipped. */
+.chart-tip[data-flip="right"] { transform: translateX(12px); }
+.chart-tip[data-flip="left"] { transform: translateX(calc(-100% - 12px)); }
+
+.legend i.primary { background: var(--primary); }
+
+/* ------------------------------------------------------------------ vertical bars */
+
+.columns { --axis-w: 34px; }
+
+.col-plot { position: relative; height: var(--plot-h, 190px); }
+
+.col-grid {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; justify-content: space-between;
+  pointer-events: none;
+}
+.col-gridline {
+  position: relative; height: 0;
+  margin-left: var(--axis-w);
+  border-top: 1px solid var(--border);
+}
+.col-gridline span {
+  position: absolute; right: calc(100% + 7px); top: -.62em;
+  font-size: .68rem; color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.col-bars {
+  position: relative; height: 100%;
+  margin-left: var(--axis-w);
+  /* An 8px channel between bars, so two adjacent fills never read as one wide mark. */
+  display: flex; align-items: flex-end; gap: 8px;
+}
+
+.col-bar {
+  flex: 1; min-width: 0; height: 100%;
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+}
+
+/* The value rides above its own bar. A number you can read without hovering is one the
+   printout keeps and a screen reader reaches. */
+.col-value {
+  font-size: .7rem; color: var(--muted); margin-bottom: 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.col-fill {
+  width: 100%; max-width: 56px;
+  background: var(--primary);
+  border-radius: 4px 4px 0 0;
+  transition: filter .15s ease;
+}
+.col-bar.hot .col-fill { filter: brightness(1.18); }
+
+.col-fill.bad { background: var(--bad); }
+.col-fill.warn { background: var(--warn); }
+.col-fill.ok { background: var(--ok); }
+.col-fill.info { background: var(--info); }
+.col-fill.ai { background: var(--ai); }
+.col-fill.purple { background: var(--purple); }
+.col-fill.faint { background: var(--faint); }
+
+.col-axis { display: flex; gap: 8px; margin-left: var(--axis-w); margin-top: 7px; }
+.col-axis span {
+  flex: 1; min-width: 0; text-align: center;
+  font-size: .68rem; color: var(--faint);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ the numbers */
+
+.series-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.series-table th, .series-table td {
+  text-align: left; padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.series-table thead th {
+  font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--faint);
+}
+/* A row header is content, not a column heading. The stylesheet uppercases every `th`,
+   which turned an axis of dates into AUG 4, AUG 5, AUG 6. */
+.series-table tbody th { font-weight: 500; color: var(--text-dim); text-transform: none; }
+.series-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.series-table tbody tr:last-child th,
+.series-table tbody tr:last-child td { border-bottom: 0; }
+
+/* ------------------------------------------------------------------ one figure, large */
+
+.focus-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 18px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.focus-head .chart-lede { margin: 6px 0 0; max-width: 62ch; }
+.focus-plot { margin: 4px 0; }
+.focus-table { margin-top: 18px; }
+.focus-table > summary {
+  cursor: pointer; font-size: .78rem; color: var(--muted);
+  margin-bottom: 10px; user-select: none;
+}
+
+/* A segmented control: the forms this figure may be drawn in, as one object rather than
+   three loose buttons, because they are alternatives and only one can be true. */
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.seg button {
+  border: 0; background: transparent; cursor: pointer;
+  padding: 7px 13px; font-size: .76rem; font-weight: 500; color: var(--muted);
+  min-height: 34px;
+}
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button:hover { background: var(--field-hover); color: var(--text-dim); }
+.seg button.on { background: var(--primary-soft); color: var(--text); font-weight: 650; }
+
+/* ------------------------------------------------------------------ one figure, on paper
+ *
+ * Printing a subtree is not something CSS can express, so the page is hidden wholesale and
+ * a sheet holding exactly one figure — portalled to `body`, out of reach of the hiding —
+ * is shown in its place.
+ */
+
+.print-sheet { display: none; }
+
+@media print {
+  body.print-single .shell,
+  body.print-single .backdrop { display: none !important; }
+
+  body.print-single .print-sheet { display: block !important; }
+
+  .print-sheet h1 { font-size: 15pt; margin: 0 0 3px; }
+  .print-sheet-meta { font-size: 9pt; color: #333; margin: 0 0 14px; }
+  .print-sheet .chart-lede { color: #333 !important; margin-bottom: 14px; }
+  .print-sheet .series-table { margin-top: 16px; break-inside: auto; }
+
+  /* Most printers drop backgrounds, so every mark is given ink of its own. */
+  .col-fill { background: #666 !important; border: 1px solid #444; }
+  .col-value, .col-axis span, .col-gridline span { color: #333 !important; }
+  .col-gridline { border-top-color: #ccc !important; }
+
+  .line-svg .line { stroke: #000 !important; }
+  .line-svg .grid { stroke: #ccc !important; }
+  .line-svg .axis-x, .line-svg .axis-y { fill: #333 !important; }
+
+  .series-table th, .series-table td { border-bottom: 1px solid #bbb !important; }
+  .series-table thead th { color: #000 !important; }
+  .series-table tbody th { color: #000 !important; }
+
+  /* Interaction has nothing to say on paper. */
+  .chart-tip, .seg, .focus-table > summary { display: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .col-fill { transition: none; }
 }
