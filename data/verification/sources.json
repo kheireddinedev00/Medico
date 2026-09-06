@@ -1,0 +1,23 @@
+{
+  "_note": "Third-party datasets used to CHECK OUR ARITHMETIC, not to evaluate the triage agent. The CSVs themselves are gitignored - download them from the url below into this folder. Nothing here is a reference standard: see the `labels_are_derived` field on each source for why.",
+
+  "sources": [
+    {
+      "file": "Health_Risk_Dataset.csv",
+      "title": "Health Risk Prediction (Anonymized Real Data)",
+      "author": "Rakibul Alam (Kaggle user ludocielbeckett)",
+      "url": "https://www.kaggle.com/datasets/ludocielbeckett/health-risk-prediction-anonymized-real-data",
+      "licence": "Apache-2.0",
+      "rows": 1000,
+      "used_by": "evaluation/verify_news2.py",
+
+      "provenance": "The data card states the records are anonymised real patients from Central Medical College and Hospital. That claim is unverified and unverifiable from here: there is no ethics approval, no collection protocol and no institutional contact on the upload. Describe it in writing as 'a publicly available dataset described as anonymised patient records', never as 'real hospital data'.",
+
+      "labels_are_derived": "Risk_Level is NOT an independent clinical judgement. It is the published NEWS2 risk category recomputed from the same seven columns - verified empirically: our own scorer reproduces the four classes exactly, with Normal at aggregate 0, Low at 1-4, Medium at 5-6 and High at 7 or above. The data card presents it as a 'target variable' without saying so.",
+
+      "why_not_used_for_evaluation": "Because the labels are derived, scoring the triage agent against them would be scoring NEWS2 against NEWS2 - a guaranteed pass that measures nothing. The evaluation set stays data/triage_cases/, whose labels were written by hand and fixed before any run. The dataset also carries no chief complaint, no symptoms and no age, so it cannot exercise the red-flag layer or the population gate at all.",
+
+      "what_it_is_good_for": "An independent check on our TRANSCRIPTION of the NEWS2 tables into data/triage_rules.json. Someone else scored these 1000 rows against the same published scale; if our tables are typed correctly we must agree on every one. That addresses the open verification_status field in the rule set."
+    }
+  ]
+}

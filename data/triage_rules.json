@@ -3,7 +3,7 @@
   "_editing": "Bands are inclusive. A null min means unbounded below, a null max means unbounded above. Bands within a parameter must not overlap and must cover the whole plausible range; tests/test_news2.py asserts exactly that.",
 
   "ruleset_version": "news2-2017.1",
-  "verification_status": "TRANSCRIBED - the NEWS2 tables below were written from the published scale and have NOT yet been checked cell-by-cell against the RCP source document. Do this before the capstone defence and before any clinical use, then change this field to VERIFIED and record who checked it.",
+  "verification_status": "TRANSCRIBED AND CROSS-CHECKED - still NOT clinically signed off, so this field must not be changed to VERIFIED yet. The tables below were transcribed from the published scale and have since been checked against an independent scoring of 1000 observation sets (evaluation/verify_news2.py). Scale 1 agrees on 876 of 876 rows. Scale 2 agrees on 111 of 124; all 13 differences are rows where the other scoring applied the on-oxygen saturation column to a patient breathing air, which the published Scale 2 does not do - our tables are correct on every one. Two bands are NOT covered by that check because no row reaches them: respiration_rate score 1 (9-11 breaths/min) and temperature score 3 (35.0C or below). Read those two against the RCP source by hand. This is arithmetic agreement, not clinical sign-off: before any clinical use a named clinician must review the thresholds and record their name here.",
 
   "population": {
     "min_age_years": 16,

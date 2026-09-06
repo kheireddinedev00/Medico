@@ -17,3 +17,9 @@ data/references/*.pdf
 # clinic's internal protocol is not ours to publish either. The registry goes with them —
 # it names files a clone would not have.
 data/references/added/
+
+# Third-party datasets used to verify our transcription of a published scale. Excluded
+# for the same reason the reference PDFs are: nobody here owns them, and this repository
+# holds no patient records - claimed-anonymised or otherwise. data/verification/sources.json
+# names each one and where to download it.
+data/verification/*.csv
